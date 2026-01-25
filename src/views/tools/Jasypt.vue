@@ -1,0 +1,108 @@
+<script setup>
+  import { decryptWithJasypt, encryptWithJasypt } from '@/api/jasypt';
+  import { useAppToast } from '@/composables/useAppToast';
+  import { copyText, getErrorMsg } from '@/utils/commonUtils';
+  import { validateSecretKey } from '@/utils/validateUtils';
+  import { ref } from 'vue';
+
+  const toast = useAppToast();
+  const plainText = ref('');
+  const secretKey = ref('');
+  const returnText = ref('');
+
+  // 암호화
+  const encrypt = () => {
+    const plainTextValue = plainText.value;
+    const secretKeyValue = secretKey.value;
+
+    if (!plainTextValue || !secretKeyValue) {
+      return toast.error('입력된 값을 확인해 주세요.');
+    }
+
+    if (!validateSecretKey(secretKeyValue)) {
+      return toast.error('비밀 키', '영문자, 숫자, 특수문자만 사용할 수 있습니다.');
+    }
+
+    const params = {
+      plainText: plainTextValue,
+      secretKey: secretKeyValue,
+    };
+
+    encryptWithJasypt(params)
+      .then((result) => {
+        if (result.code === 'S0000') {
+          const data = result.data;
+          returnText.value = data.encText;
+        }
+      })
+      .catch((error) => {
+        toast.error(getErrorMsg(error));
+      });
+  };
+
+  // 복호화
+  const decrypt = () => {
+    const plainTextValue = plainText.value;
+    const secretKeyValue = secretKey.value;
+
+    if (!plainTextValue || !secretKeyValue) {
+      return toast.error('입력된 값을 확인해 주세요.');
+    }
+
+    if (!validateSecretKey(secretKeyValue)) {
+      return toast.error('비밀 키', '영문자, 숫자, 특수문자만 사용할 수 있습니다.');
+    }
+
+    const params = {
+      encText: plainTextValue,
+      secretKey: secretKeyValue,
+    };
+
+    decryptWithJasypt(params)
+      .then((result) => {
+        if (result.code === 'S0000') {
+          const data = result.data;
+          returnText.value = data.decText;
+        }
+      })
+      .catch((error) => {
+        toast.error(getErrorMsg(error));
+      });
+  };
+
+  const handleCopy = async (text) => {
+    const isSuccess = await copyText(text);
+    if (isSuccess) {
+      toast.success('클립보드에 복사되었습니다.');
+    }
+  };
+</script>
+<template>
+  <Fluid>
+    <div class="flex">
+      <div class="card flex w-full flex-col gap-4">
+        <div class="text-xl font-semibold">Jasypt</div>
+        <label><Tag value="Plain Text"></Tag></label>
+        <Textarea placeholder="여기에 입력하세요." :auto-resize="true" rows="3" cols="30" v-model="plainText" />
+        <div class="flex flex-wrap gap-4 pt-4">
+          <div class="flex grow basis-0 flex-col gap-2">
+            <label><Tag severity="success" value="Secret Key"></Tag></label>
+            <Textarea placeholder="여기에 입력하세요." :auto-resize="true" rows="1" cols="30" v-model="secretKey" />
+          </div>
+        </div>
+        <div class="flex flex-col gap-4 pt-4">
+          <div class="flex flex-row gap-4">
+            <Button label="암호화" severity="contrast" @click="encrypt()" />
+            <Button label="복호화" severity="secondary" @click="decrypt()" />
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-4 pt-4">
+          <div class="flex grow basis-0 flex-col gap-2">
+            <label><Tag severity="warn" value="Return"></Tag></label>
+            <Textarea placeholder="암호화/복호화된 값이 여기에 출력됩니다." :auto-resize="true" rows="3" cols="30" v-model="returnText" @click="handleCopy(returnText)" readonly />
+          </div>
+        </div>
+      </div>
+    </div>
+  </Fluid>
+</template>

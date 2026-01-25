@@ -49,6 +49,11 @@
           icon: 'pi pi-fw pi-globe',
           to: '/tools/encoder',
         },
+        {
+          label: 'Jasypt',
+          icon: 'pi pi-fw pi-key',
+          to: '/tools/jasypt',
+        },
       ],
     },
   ]);

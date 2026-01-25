@@ -7,3 +7,8 @@ export const validateUrl = (value) => {
     return false;
   }
 };
+
+// secretKey 검증
+export const validateSecretKey = (value) => {
+  return /^[A-Za-z0-9!@#$%^&*()_+={}\[\]:;"'<>,.?/~`-]*$/.test(value);
+};
