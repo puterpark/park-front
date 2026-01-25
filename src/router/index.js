@@ -1,6 +1,5 @@
-import { createRouter, createWebHistory } from 'vue-router';
-
 import AppLayout from '@/layout/AppLayout.vue';
+import { createRouter, createWebHistory } from 'vue-router';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -18,6 +17,11 @@ const router = createRouter({
           path: '/tools/shorten-url',
           name: 'shortenUrl',
           component: () => import('@/views/pages/tools/ShortenUrl.vue'),
+        },
+        {
+          path: '/tools/qrcode',
+          name: 'qrCode',
+          component: () => import('@/views/pages/tools/QrCode.vue'),
         },
       ],
     },

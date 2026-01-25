@@ -39,6 +39,11 @@
           icon: 'pi pi-fw pi-link',
           to: '/tools/shorten-url',
         },
+        {
+          label: 'QR Code',
+          icon: 'pi pi-fw pi-qrcode',
+          to: '/tools/qrcode',
+        },
       ],
     },
   ]);

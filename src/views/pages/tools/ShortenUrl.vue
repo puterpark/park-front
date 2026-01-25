@@ -46,14 +46,16 @@
         <div class="flex flex-col gap-4 md:flex-row">
           <InputGroup>
             <Button label="Shorten" @click="shorten()" />
-            <InputText placeholder="URL" v-model="orgUrl" :invalid="validUrl" @keyup.enter="shorten()" />
+            <InputText id="orgUrl" placeholder="URL" v-model="orgUrl" :invalid="validUrl" @keyup.enter="shorten()" />
           </InputGroup>
         </div>
       </div>
     </div>
     <div class="mt-8 flex" v-if="shortenUrl">
       <div class="card flex w-full flex-col gap-4">
-        <div class="hover:text-primary-500 cursor-pointer text-xl font-semibold" @click="handleCopy(shortenUrl)">{{ shortenUrl }}</div>
+        <div class="hover:text-primary-500 cursor-pointer text-xl font-semibold" @click="handleCopy(shortenUrl)">
+          {{ shortenUrl }}
+        </div>
       </div>
     </div>
   </Fluid>
