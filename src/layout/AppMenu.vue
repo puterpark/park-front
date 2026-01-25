@@ -31,6 +31,16 @@
         },
       ],
     },
+    {
+      label: 'TOOLS',
+      items: [
+        {
+          label: 'Shorten URL',
+          icon: 'pi pi-fw pi-link',
+          to: '/tools/shorten-url',
+        },
+      ],
+    },
   ]);
 </script>
 

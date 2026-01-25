@@ -1,0 +1,60 @@
+<script setup>
+  import { createShortenUrl } from '@/api/shortenUrl';
+  import { useAppToast } from '@/composables/useAppToast';
+  import { copyText, getErrorMsg } from '@/utils/commonUtils';
+  import { validateUrl } from '@/utils/validateUtils';
+  import { ref } from 'vue';
+
+  const toast = useAppToast();
+
+  const orgUrl = ref('');
+  const shortenUrl = ref('');
+  const validUrl = ref(false);
+
+  const shorten = () => {
+    validUrl.value = false;
+
+    if (!validateUrl(orgUrl.value)) {
+      validUrl.value = true;
+      return toast.error('유효하지 않은 URL 형식입니다.');
+    }
+
+    createShortenUrl({ orgUrl: orgUrl.value })
+      .then((success) => {
+        if (success.code === 'S0000') {
+          const data = success.data;
+          shortenUrl.value = `${window.location.origin}/0/${data.shortenUri}`;
+        }
+      })
+      .catch((error) => {
+        toast.error(getErrorMsg(error));
+      });
+  };
+
+  const handleCopy = async (uri) => {
+    const isSuccess = await copyText(uri);
+    if (isSuccess) {
+      toast.success('클립보드에 복사되었습니다.');
+    }
+  };
+</script>
+<template>
+  <Fluid>
+    <div class="flex">
+      <div class="card flex w-full flex-col gap-4">
+        <div class="text-xl font-semibold">Shorten URL</div>
+        <div class="flex flex-col gap-4 md:flex-row">
+          <InputGroup>
+            <Button label="Shorten" @click="shorten()" />
+            <InputText placeholder="URL" v-model="orgUrl" :invalid="validUrl" @keyup.enter="shorten()" />
+          </InputGroup>
+        </div>
+      </div>
+    </div>
+    <div class="mt-8 flex" v-if="shortenUrl">
+      <div class="card flex w-full flex-col gap-4">
+        <div class="hover:text-primary-500 cursor-pointer text-xl font-semibold" @click="handleCopy(shortenUrl)">{{ shortenUrl }}</div>
+      </div>
+    </div>
+  </Fluid>
+</template>

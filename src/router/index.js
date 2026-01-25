@@ -14,6 +14,11 @@ const router = createRouter({
           name: 'empty',
           component: () => import('@/views/pages/Empty.vue'),
         },
+        {
+          path: '/tools/shorten-url',
+          name: 'shortenUrl',
+          component: () => import('@/views/pages/tools/ShortenUrl.vue'),
+        },
       ],
     },
   ],
