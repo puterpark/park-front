@@ -23,6 +23,11 @@ const router = createRouter({
           name: 'qrCode',
           component: () => import('@/views/pages/tools/QrCode.vue'),
         },
+        {
+          path: '/tools/encoder',
+          name: 'encoder',
+          component: () => import('@/views/pages/tools/Encoder.vue'),
+        },
       ],
     },
   ],

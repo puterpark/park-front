@@ -3,6 +3,7 @@
   import { ref } from 'vue';
 
   const textarea = ref('');
+  const sliderValue = ref(200);
 </script>
 <template>
   <Fluid>
@@ -15,8 +16,10 @@
     </div>
     <div class="mt-8 flex" v-if="textarea">
       <div class="card flex w-full flex-col gap-4">
-        <div class="flex flex-col gap-4 md:flex-row">
-          <qrcode-vue :value="textarea" :size="200" level="H" />
+        <InputText v-model.number="sliderValue" readonly />
+        <Slider v-model="sliderValue" :min="50" :max="500" :step="10" />
+        <div class="flex flex-col gap-4 pt-4 md:flex-row">
+          <qrcode-vue :value="textarea" :size="sliderValue" level="H" />
         </div>
       </div>
     </div>

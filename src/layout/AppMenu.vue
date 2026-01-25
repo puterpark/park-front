@@ -44,6 +44,11 @@
           icon: 'pi pi-fw pi-qrcode',
           to: '/tools/qrcode',
         },
+        {
+          label: 'Encoder',
+          icon: 'pi pi-fw pi-globe',
+          to: '/tools/encoder',
+        },
       ],
     },
   ]);
