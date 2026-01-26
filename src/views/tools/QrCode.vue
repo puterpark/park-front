@@ -10,7 +10,9 @@
     <div class="flex">
       <div class="card flex w-full flex-col gap-4">
         <div class="text-xl font-semibold">QR Code</div>
-        <label for="textarea"><Tag value="입력"></Tag></label>
+        <div>
+          <Tag value="입력" />
+        </div>
         <Textarea id="textarea" placeholder="여기에 입력하세요." :autoResize="true" rows="3" cols="30" v-model="textarea" />
       </div>
     </div>

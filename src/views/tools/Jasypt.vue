@@ -82,11 +82,15 @@
     <div class="flex">
       <div class="card flex w-full flex-col gap-4">
         <div class="text-xl font-semibold">Jasypt</div>
-        <label><Tag value="Plain Text"></Tag></label>
+        <div>
+          <Tag value="Plain Text" />
+        </div>
         <Textarea placeholder="여기에 입력하세요." :auto-resize="true" rows="3" cols="30" v-model="plainText" />
         <div class="flex flex-wrap gap-4 pt-4">
-          <div class="flex grow basis-0 flex-col gap-2">
-            <label><Tag severity="success" value="Secret Key"></Tag></label>
+          <div class="flex grow basis-0 flex-col gap-4">
+            <div>
+              <Tag severity="success" value="Secret Key" />
+            </div>
             <Textarea placeholder="여기에 입력하세요." :auto-resize="true" rows="1" cols="30" v-model="secretKey" />
           </div>
         </div>
@@ -97,8 +101,10 @@
           </div>
         </div>
         <div class="flex flex-wrap gap-4 pt-4">
-          <div class="flex grow basis-0 flex-col gap-2">
-            <label><Tag severity="warn" value="Return"></Tag></label>
+          <div class="flex grow basis-0 flex-col gap-4">
+            <div>
+              <Tag severity="warn" value="Return" />
+            </div>
             <Textarea placeholder="암호화/복호화된 값이 여기에 출력됩니다." :auto-resize="true" rows="3" cols="30" v-model="returnText" @click="handleCopy(returnText)" readonly />
           </div>
         </div>
