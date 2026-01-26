@@ -12,3 +12,8 @@ export const validateUrl = (value) => {
 export const validateSecretKey = (value) => {
   return /^[A-Za-z0-9!@#$%^&*()_+={}\[\]:;"'<>,.?/~`-]*$/.test(value);
 };
+
+// iv 검증
+export const validateIv = (value) => {
+  return /^[A-Za-z0-9!@#$%^&*()_+={}\[\]:;"'<>,.?/~`-]{16}$/.test(value);
+};

@@ -35,6 +35,11 @@ const router = createRouter({
           name: 'jasypt',
           component: () => import('@/views/tools/Jasypt.vue'),
         },
+        {
+          path: '/tools/aes',
+          name: 'aes',
+          component: () => import('@/views/tools/Aes.vue'),
+        },
       ],
     },
 

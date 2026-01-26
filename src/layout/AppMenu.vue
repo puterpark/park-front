@@ -54,6 +54,11 @@
           icon: 'pi pi-fw pi-key',
           to: '/tools/jasypt',
         },
+        {
+          label: 'Aes',
+          icon: 'pi pi-fw pi-shield',
+          to: '/tools/aes',
+        },
       ],
     },
   ]);

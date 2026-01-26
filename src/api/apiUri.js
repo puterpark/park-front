@@ -7,4 +7,8 @@ export const API_URI = {
     ENCRYPT: '/api/v1/jasypt/encrypt',
     DECRYPT: '/api/v1/jasypt/decrypt',
   },
+  AES: {
+    ENCRYPT: '/api/v1/aes/encrypt',
+    DECRYPT: '/api/v1/aes/decrypt',
+  },
 };
