@@ -59,6 +59,11 @@
           icon: 'pi pi-fw pi-shield',
           to: '/tools/aes',
         },
+        {
+          label: 'Password',
+          icon: 'pi pi-fw pi-unlock',
+          to: '/tools/password',
+        },
       ],
     },
   ]);

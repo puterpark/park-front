@@ -40,6 +40,11 @@ const router = createRouter({
           name: 'aes',
           component: () => import('@/views/tools/Aes.vue'),
         },
+        {
+          path: '/tools/password',
+          name: 'password',
+          component: () => import('@/views/tools/Password.vue'),
+        },
       ],
     },
 
