@@ -50,6 +50,11 @@ const router = createRouter({
           name: 'unixTime',
           component: () => import('@/views/tools/UnixTime.vue'),
         },
+        {
+          path: '/tools/file-size',
+          name: 'fileSize',
+          component: () => import('@/views/tools/FileSize.vue'),
+        },
       ],
     },
 

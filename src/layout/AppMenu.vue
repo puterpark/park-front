@@ -69,6 +69,11 @@
           icon: 'pi pi-fw pi-clock',
           to: '/tools/unix-time',
         },
+        {
+          label: 'FileSize',
+          icon: 'pi pi-fw pi-sync',
+          to: '/tools/file-size',
+        },
       ],
     },
   ]);
