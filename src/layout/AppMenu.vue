@@ -64,6 +64,11 @@
           icon: 'pi pi-fw pi-unlock',
           to: '/tools/password',
         },
+        {
+          label: 'UnixTime',
+          icon: 'pi pi-fw pi-clock',
+          to: '/tools/unix-time',
+        },
       ],
     },
   ]);

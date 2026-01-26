@@ -45,6 +45,11 @@ const router = createRouter({
           name: 'password',
           component: () => import('@/views/tools/Password.vue'),
         },
+        {
+          path: '/tools/unix-time',
+          name: 'unixTime',
+          component: () => import('@/views/tools/UnixTime.vue'),
+        },
       ],
     },
 
