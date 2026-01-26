@@ -69,7 +69,7 @@
             <div>
               <Tag severity="warn" value="Option" />
             </div>
-            <div class="mt-2 flex items-center gap-6">
+            <div class="mt-2 flex flex-wrap items-center gap-x-6 gap-y-3">
               <div>
                 <Checkbox
                   inputId="upper"

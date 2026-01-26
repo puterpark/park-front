@@ -1,9 +1,29 @@
 <script setup>
   import QrcodeVue from 'qrcode.vue';
-  import { ref } from 'vue';
+  import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 
   const textarea = ref('');
   const sliderValue = ref(200);
+
+  const windowWidth = ref(window.innerWidth);
+
+  const updateWidth = () => {
+    windowWidth.value = window.innerWidth;
+  };
+
+  onMounted(() => window.addEventListener('resize', updateWidth));
+  onUnmounted(() => window.removeEventListener('resize', updateWidth));
+
+  const sliderMaxValue = computed(() => {
+    const value = Math.min(windowWidth.value - 115, 500);
+    return value < 5 ? 5 : value;
+  });
+
+  watch(sliderMaxValue, (newMax) => {
+    if (sliderValue.value > newMax) {
+      sliderValue.value = newMax;
+    }
+  });
 </script>
 <template>
   <Fluid>
@@ -19,8 +39,8 @@
     <div class="mt-8 flex" v-if="textarea">
       <div class="card flex w-full flex-col gap-4">
         <InputText v-model.number="sliderValue" readonly />
-        <Slider v-model="sliderValue" :min="50" :max="500" :step="10" />
-        <div class="flex flex-col gap-4 pt-4 md:flex-row">
+        <Slider v-model="sliderValue" :min="50" :max="sliderMaxValue" :step="10" />
+        <div class="flex max-w-fit flex-col gap-4 pt-4">
           <qrcode-vue :value="textarea" :size="sliderValue" level="H" />
         </div>
       </div>

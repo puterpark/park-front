@@ -45,7 +45,7 @@
           <Tag value="입력" />
         </div>
         <Textarea placeholder="여기에 입력하세요." rows="3" cols="30" v-model="orgData" />
-        <div class="flex flex-wrap gap-4 pt-4">
+        <div class="flex flex-col gap-4 pt-4 md:flex-row">
           <div class="flex grow basis-0 flex-col gap-4">
             <div>
               <Tag severity="success" value="Base64 Encode" />
@@ -59,7 +59,7 @@
             <Textarea rows="3" cols="30" v-model="convert.base64Decode" @click="handleCopy(convert.base64Decode)" readonly />
           </div>
         </div>
-        <div class="flex flex-wrap gap-4 pt-4">
+        <div class="flex flex-col gap-4 pt-4 md:flex-row">
           <div class="flex grow basis-0 flex-col gap-4">
             <div>
               <Tag severity="warn" value="URL Encode" />
@@ -73,7 +73,7 @@
             <Textarea rows="3" cols="30" v-model="convert.urlDecode" @click="handleCopy(convert.urlDecode)" readonly />
           </div>
         </div>
-        <div class="flex flex-wrap gap-4 pt-4">
+        <div class="flex flex-col gap-4 pt-4 md:flex-row">
           <div class="flex grow basis-0 flex-col gap-4">
             <div>
               <Tag severity="danger" value="Unicode Encode" />
