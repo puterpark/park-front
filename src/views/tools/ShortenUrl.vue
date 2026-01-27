@@ -23,7 +23,7 @@
       .then((success) => {
         if (success.code === 'S0000') {
           const data = success.data;
-          shortenUrl.value = `${window.location.origin}/0/${data.shortenUri}`;
+          shortenUrl.value = `${window.location.origin}/s/${data.shortenUri}`;
         }
       })
       .catch((error) => {
@@ -45,8 +45,8 @@
         <div class="text-xl font-semibold">Shorten URL</div>
         <div class="flex flex-col gap-4 md:flex-row">
           <InputGroup>
-            <Button label="Shorten" @click="shorten()" />
-            <InputText id="orgUrl" placeholder="URL" v-model="orgUrl" :invalid="validUrl" @keyup.enter="shorten()" />
+            <Button label="Shorten" @click="shorten" />
+            <InputText id="orgUrl" placeholder="URL" v-model="orgUrl" :invalid="validUrl" @keyup.enter="shorten" />
           </InputGroup>
         </div>
       </div>
