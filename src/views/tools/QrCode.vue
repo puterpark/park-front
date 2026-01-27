@@ -1,6 +1,9 @@
 <script setup>
+  import { useSeo } from '@/composables/useSeo';
   import QrcodeVue from 'qrcode.vue';
   import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+
+  useSeo('입력한 문자열로 QR코드를 생성해 URL를 입력하여 짧은 링크(shortenURL)를 생성해 보세요.', 'QRCode, QR코드, QRCode Generate, QRCode generator, QR코드 생성기, QR코드 생성');
 
   const textarea = ref('');
   const sliderValue = ref(200);

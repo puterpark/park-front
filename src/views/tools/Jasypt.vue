@@ -1,9 +1,12 @@
 <script setup>
   import { decryptWithJasypt, encryptWithJasypt } from '@/api/jasypt';
   import { useAppToast } from '@/composables/useAppToast';
+  import { useSeo } from '@/composables/useSeo';
   import { copyText, getErrorMsg } from '@/utils/commonUtils';
   import { validateSecretKey } from '@/utils/validateUtils';
   import { ref } from 'vue';
+
+  useSeo('입력한 문자열을 jasypt 암호화 또는 복호화 해 보세요.', 'jasypt, encrypt, decrypt, jasypt 암호화, jasypt 복호화, jasypt encrypt, jasypt decrypt');
 
   const toast = useAppToast();
   const plainText = ref('');

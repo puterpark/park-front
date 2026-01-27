@@ -74,6 +74,9 @@ const router = createRouter({
       component: NotFound,
     },
   ],
+  scrollBehavior() {
+    return { top: 0 };
+  },
 });
 
 export default router;

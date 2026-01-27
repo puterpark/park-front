@@ -1,9 +1,12 @@
 <script setup>
   import { createShortenUrl } from '@/api/shortenUrl';
   import { useAppToast } from '@/composables/useAppToast';
+  import { useSeo } from '@/composables/useSeo';
   import { copyText, getErrorMsg } from '@/utils/commonUtils';
   import { validateUrl } from '@/utils/validateUtils';
   import { ref } from 'vue';
+
+  useSeo('URL를 입력하여 짧은 링크(shortenURL)를 생성해 보세요.', 'shortenURL, 짧은 링크, 단축 링크');
 
   const toast = useAppToast();
 
@@ -20,7 +23,7 @@
     }
 
     const params = { orgUrl: orgUrl.value };
-    
+
     const { code, data } = await createShortenUrl(params);
     if (code === 'S0000') {
       shortenUrl.value = `${window.location.origin}/s/${data.shortenUri}`;

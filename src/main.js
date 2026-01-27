@@ -1,16 +1,16 @@
-import { createApp } from 'vue';
-
-import PrimeVue from 'primevue/config';
-import ConfirmationService from 'primevue/confirmationservice';
-import ToastService from 'primevue/toastservice';
-import ScriptX from 'vue-scriptx';
-import Ads from 'vue-google-adsense';
-
 import { definePreset } from '@primeuix/themes';
 import Aura from '@primeuix/themes/aura';
 
 import '@/assets/styles.scss';
 import '@/assets/tailwind.css';
+import { createHead } from '@unhead/vue/client';
+
+import PrimeVue from 'primevue/config';
+import ConfirmationService from 'primevue/confirmationservice';
+import ToastService from 'primevue/toastservice';
+import { createApp } from 'vue';
+import Ads from 'vue-google-adsense';
+import ScriptX from 'vue-scriptx';
 
 import App from './App.vue';
 import router from './router';
@@ -49,5 +49,8 @@ app.use(ConfirmationService);
 
 app.use(ScriptX);
 app.use(Ads.AutoAdsense, { adClient: 'ca-pub-8002214670454767', isNewAdsCode: false });
+
+const head = createHead();
+app.use(head);
 
 app.mount('#app');

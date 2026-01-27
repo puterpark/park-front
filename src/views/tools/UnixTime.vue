@@ -1,6 +1,9 @@
 <script setup>
-  import { computed, ref } from 'vue';
+  import { useSeo } from '@/composables/useSeo';
   import dayjs from 'dayjs';
+  import { computed, ref } from 'vue';
+
+  useSeo('unixtime를 변환해 보세요.', 'unixtime, 유닉스타임, 변환, convert, converter');
 
   const unixTime = ref(dayjs().unix());
   const realTime = computed({
