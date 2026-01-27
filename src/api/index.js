@@ -12,8 +12,14 @@ const api = axios.create({
 });
 
 api.interceptors.request.use();
-api.interceptors.response.use(async (response) => {
-  return response.data;
-});
+api.interceptors.response.use(
+  async (response) => {
+    return response.data;
+  },
+  async (error) => {
+    const { data } = error.response;
+    return data;
+  }
+);
 
 export default api;

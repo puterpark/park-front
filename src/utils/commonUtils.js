@@ -2,12 +2,11 @@ import { ERROR_MSG } from '@/constants/errorMsg';
 
 /**
  * 에러 처리
- * @param error
+ * @param code
  */
-export const getErrorMsg = (error) => {
-  const res = error.response?.data;
-  if (res) {
-    return ERROR_MSG[res.code] ?? ERROR_MSG.E0003;
+export const getErrorMsg = (code) => {
+  if (code) {
+    return ERROR_MSG[code] ?? ERROR_MSG.E0003;
   } else {
     return ERROR_MSG.E0003;
   }

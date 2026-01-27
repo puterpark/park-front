@@ -11,7 +11,7 @@
   const shortenUrl = ref('');
   const validUrl = ref(false);
 
-  const shorten = () => {
+  const shorten = async () => {
     validUrl.value = false;
 
     if (!validateUrl(orgUrl.value)) {
@@ -19,16 +19,14 @@
       return toast.error('유효하지 않은 URL 형식입니다.');
     }
 
-    createShortenUrl({ orgUrl: orgUrl.value })
-      .then((success) => {
-        if (success.code === 'S0000') {
-          const data = success.data;
-          shortenUrl.value = `${window.location.origin}/s/${data.shortenUri}`;
-        }
-      })
-      .catch((error) => {
-        toast.error(getErrorMsg(error));
-      });
+    const params = { orgUrl: orgUrl.value };
+    
+    const { code, data } = await createShortenUrl(params);
+    if (code === 'S0000') {
+      shortenUrl.value = `${window.location.origin}/s/${data.shortenUri}`;
+    } else {
+      toast.error(getErrorMsg(code));
+    }
   };
 
   const handleCopy = async (uri) => {

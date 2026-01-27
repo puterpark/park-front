@@ -11,7 +11,7 @@
   const returnText = ref('');
 
   // 암호화
-  const encrypt = () => {
+  const encrypt = async () => {
     const plainTextValue = plainText.value;
     const secretKeyValue = secretKey.value;
 
@@ -28,20 +28,16 @@
       secretKey: secretKeyValue,
     };
 
-    encryptWithJasypt(params)
-      .then((result) => {
-        if (result.code === 'S0000') {
-          const data = result.data;
-          returnText.value = data.encText;
-        }
-      })
-      .catch((error) => {
-        toast.error(getErrorMsg(error));
-      });
+    const { code, data } = await encryptWithJasypt(params);
+    if (code === 'S0000') {
+      returnText.value = data.encText;
+    } else {
+      toast.error(getErrorMsg(code));
+    }
   };
 
   // 복호화
-  const decrypt = () => {
+  const decrypt = async () => {
     const plainTextValue = plainText.value;
     const secretKeyValue = secretKey.value;
 
@@ -58,16 +54,12 @@
       secretKey: secretKeyValue,
     };
 
-    decryptWithJasypt(params)
-      .then((result) => {
-        if (result.code === 'S0000') {
-          const data = result.data;
-          returnText.value = data.decText;
-        }
-      })
-      .catch((error) => {
-        toast.error(getErrorMsg(error));
-      });
+    const { code, data } = await decryptWithJasypt(params);
+    if (code === 'S0000') {
+      returnText.value = data.decText;
+    } else {
+      toast.error(getErrorMsg(code));
+    }
   };
 
   const handleCopy = async (text) => {

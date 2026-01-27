@@ -83,14 +83,9 @@
     },
   ]);
 
-  onMounted(() => {
-    getIp()
-      .then((success) => {
-        ip.value = success.data.ip;
-      })
-      .catch((error) => {
-        ip.value = '';
-      });
+  onMounted(async () => {
+    const { code, data } = await getIp();
+    ip.value = code === 'S0000' ? data.ip : '';
   });
 
   const handleCopy = async (text) => {
