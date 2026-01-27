@@ -11,4 +11,5 @@ export const API_URI = {
     ENCRYPT: '/api/v1/aes/encrypt',
     DECRYPT: '/api/v1/aes/decrypt',
   },
+  IP: '/api/v1/ip',
 };

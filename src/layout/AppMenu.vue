@@ -1,8 +1,13 @@
 <script setup>
-  import { ref } from 'vue';
+  import { onMounted, ref } from 'vue';
 
   import AppMenuItem from './AppMenuItem.vue';
+  import { getIp } from '@/api/ip';
+  import { copyText } from '@/utils/commonUtils';
+  import { useAppToast } from '@/composables/useAppToast';
 
+  const toast = useAppToast();
+  const ip = ref('');
   const model = ref([
     {
       label: 'HOME',
@@ -77,10 +82,30 @@
       ],
     },
   ]);
+
+  onMounted(() => {
+    getIp()
+      .then((success) => {
+        ip.value = success.data.ip;
+      })
+      .catch((error) => {
+        ip.value = '';
+      });
+  });
+
+  const handleCopy = async (text) => {
+    const isSuccess = await copyText(text);
+    if (isSuccess) {
+      toast.success('클립보드에 복사되었습니다.');
+    }
+  };
 </script>
 
 <template>
   <ul class="layout-menu">
+    <li class="my-4" v-if="ip">
+      <Button severity="secondary" class="w-full" size="small" @click="handleCopy(ip)">{{ ip }}</Button>
+    </li>
     <template v-for="(item, i) in model" :key="item">
       <app-menu-item v-if="!item.separator" :item="item" :index="i"></app-menu-item>
       <li v-if="item.separator" class="menu-separator"></li>
