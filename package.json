@@ -21,7 +21,9 @@
     "qrcode.vue": "^3.6.0",
     "tailwindcss-primeui": "^0.6.0",
     "vue": "^3.4.34",
-    "vue-router": "^4.4.0"
+    "vue-google-adsense": "^2.0.0",
+    "vue-router": "^4.4.0",
+    "vue-scriptx": "^0.2.7"
   },
   "devDependencies": {
     "@primevue/auto-import-resolver": "^4.3.1",

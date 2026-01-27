@@ -3,6 +3,8 @@ import { createApp } from 'vue';
 import PrimeVue from 'primevue/config';
 import ConfirmationService from 'primevue/confirmationservice';
 import ToastService from 'primevue/toastservice';
+import ScriptX from 'vue-scriptx';
+import Ads from 'vue-google-adsense';
 
 import { definePreset } from '@primeuix/themes';
 import Aura from '@primeuix/themes/aura';
@@ -44,5 +46,8 @@ app.use(PrimeVue, {
 });
 app.use(ToastService);
 app.use(ConfirmationService);
+
+app.use(ScriptX);
+app.use(Ads.AutoAdsense, { adClient: 'ca-pub-8002214670454767', isNewAdsCode: false });
 
 app.mount('#app');
