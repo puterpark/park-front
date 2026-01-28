@@ -15,7 +15,7 @@ const childrenRoutes = [
     component: () => import('@/views/tools/ShortenUrl.vue'),
   },
   {
-    path: '/tools/qrcode',
+    path: '/tools/qr-code',
     name: 'qrCode',
     component: () => import('@/views/tools/QrCode.vue'),
   },

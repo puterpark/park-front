@@ -47,7 +47,7 @@
         {
           label: 'QR Code',
           icon: 'pi pi-fw pi-qrcode',
-          to: '/tools/qrcode',
+          to: '/tools/qr-code',
         },
         {
           label: 'Encoder',

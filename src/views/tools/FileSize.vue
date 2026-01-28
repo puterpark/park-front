@@ -78,7 +78,7 @@
         </div>
         <div class="flex flex-col gap-4 md:flex-row">
           <InputGroup>
-            <Tag value="TB" severity="contrast" class="w-12" />
+            <Tag value="TB" severity="secondary" class="w-12" />
             <InputText type="number" v-model="tb" @input="updateValues($event.target.value, 'tb')" />
           </InputGroup>
         </div>
