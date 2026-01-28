@@ -43,57 +43,55 @@
   };
 </script>
 <template>
-  <Fluid>
-    <div class="flex">
-      <div class="card flex w-full flex-col gap-4">
-        <div class="text-xl font-semibold">Encoder</div>
-        <div>
-          <Tag value="입력" />
+  <div class="flex">
+    <div class="card flex w-full flex-col gap-4">
+      <div class="text-xl font-semibold">Encoder</div>
+      <div>
+        <Tag value="입력" />
+      </div>
+      <Textarea placeholder="여기에 입력하세요." rows="3" cols="30" v-model="orgData" />
+      <div class="flex flex-col gap-4 pt-4 md:flex-row">
+        <div class="flex grow basis-0 flex-col gap-4">
+          <div>
+            <Tag severity="success" value="Base64 Encode" />
+          </div>
+          <Textarea rows="3" cols="30" v-model="convert.base64Encode" @click="handleCopy(convert.base64Encode)" readonly />
         </div>
-        <Textarea placeholder="여기에 입력하세요." rows="3" cols="30" v-model="orgData" />
-        <div class="flex flex-col gap-4 pt-4 md:flex-row">
-          <div class="flex grow basis-0 flex-col gap-4">
-            <div>
-              <Tag severity="success" value="Base64 Encode" />
-            </div>
-            <Textarea rows="3" cols="30" v-model="convert.base64Encode" @click="handleCopy(convert.base64Encode)" readonly />
+        <div class="flex grow basis-0 flex-col gap-4">
+          <div>
+            <Tag severity="success" value="Base64 Decode" />
           </div>
-          <div class="flex grow basis-0 flex-col gap-4">
-            <div>
-              <Tag severity="success" value="Base64 Decode" />
-            </div>
-            <Textarea rows="3" cols="30" v-model="convert.base64Decode" @click="handleCopy(convert.base64Decode)" readonly />
-          </div>
+          <Textarea rows="3" cols="30" v-model="convert.base64Decode" @click="handleCopy(convert.base64Decode)" readonly />
         </div>
-        <div class="flex flex-col gap-4 pt-4 md:flex-row">
-          <div class="flex grow basis-0 flex-col gap-4">
-            <div>
-              <Tag severity="warn" value="URL Encode" />
-            </div>
-            <Textarea rows="3" cols="30" v-model="convert.urlEncode" @click="handleCopy(convert.urlEncode)" readonly />
+      </div>
+      <div class="flex flex-col gap-4 pt-4 md:flex-row">
+        <div class="flex grow basis-0 flex-col gap-4">
+          <div>
+            <Tag severity="warn" value="URL Encode" />
           </div>
-          <div class="flex grow basis-0 flex-col gap-4">
-            <div>
-              <Tag severity="warn" value="URL Decode" />
-            </div>
-            <Textarea rows="3" cols="30" v-model="convert.urlDecode" @click="handleCopy(convert.urlDecode)" readonly />
-          </div>
+          <Textarea rows="3" cols="30" v-model="convert.urlEncode" @click="handleCopy(convert.urlEncode)" readonly />
         </div>
-        <div class="flex flex-col gap-4 pt-4 md:flex-row">
-          <div class="flex grow basis-0 flex-col gap-4">
-            <div>
-              <Tag severity="danger" value="Unicode Encode" />
-            </div>
-            <Textarea rows="3" cols="30" v-model="convert.unicodeEncode" @click="handleCopy(convert.unicodeEncode)" readonly />
+        <div class="flex grow basis-0 flex-col gap-4">
+          <div>
+            <Tag severity="warn" value="URL Decode" />
           </div>
-          <div class="flex grow basis-0 flex-col gap-4">
-            <div>
-              <Tag severity="danger" value="Unicode Decode" />
-            </div>
-            <Textarea rows="3" cols="30" v-model="convert.unicodeDecode" @click="handleCopy(convert.unicodeDecode)" readonly />
+          <Textarea rows="3" cols="30" v-model="convert.urlDecode" @click="handleCopy(convert.urlDecode)" readonly />
+        </div>
+      </div>
+      <div class="flex flex-col gap-4 pt-4 md:flex-row">
+        <div class="flex grow basis-0 flex-col gap-4">
+          <div>
+            <Tag severity="danger" value="Unicode Encode" />
           </div>
+          <Textarea rows="3" cols="30" v-model="convert.unicodeEncode" @click="handleCopy(convert.unicodeEncode)" readonly />
+        </div>
+        <div class="flex grow basis-0 flex-col gap-4">
+          <div>
+            <Tag severity="danger" value="Unicode Decode" />
+          </div>
+          <Textarea rows="3" cols="30" v-model="convert.unicodeDecode" @click="handleCopy(convert.unicodeDecode)" readonly />
         </div>
       </div>
     </div>
-  </Fluid>
+  </div>
 </template>

@@ -48,41 +48,39 @@
 </script>
 
 <template>
-  <Fluid>
-    <div class="flex">
-      <div class="card flex w-full flex-col gap-4">
-        <div class="text-xl font-semibold">FileSize</div>
-        <div class="flex flex-col gap-4 md:flex-row">
-          <InputGroup>
-            <Tag value="Byte" class="w-12" />
-            <InputText type="number" v-model="byte" @input="updateValues($event.target.value, 'byte')" />
-          </InputGroup>
-        </div>
-        <div class="flex flex-col gap-4 md:flex-row">
-          <InputGroup>
-            <Tag value="KB" severity="success" class="w-12" />
-            <InputText type="number" v-model="kb" @input="updateValues($event.target.value, 'kb')" />
-          </InputGroup>
-        </div>
-        <div class="flex flex-col gap-4 md:flex-row">
-          <InputGroup>
-            <Tag value="MB" severity="warn" class="w-12" />
-            <InputText type="number" v-model="mb" @input="updateValues($event.target.value, 'mb')" />
-          </InputGroup>
-        </div>
-        <div class="flex flex-col gap-4 md:flex-row">
-          <InputGroup>
-            <Tag value="GB" severity="danger" class="w-12" />
-            <InputText type="number" v-model="gb" @input="updateValues($event.target.value, 'gb')" />
-          </InputGroup>
-        </div>
-        <div class="flex flex-col gap-4 md:flex-row">
-          <InputGroup>
-            <Tag value="TB" severity="secondary" class="w-12" />
-            <InputText type="number" v-model="tb" @input="updateValues($event.target.value, 'tb')" />
-          </InputGroup>
-        </div>
+  <div class="flex">
+    <div class="card flex w-full flex-col gap-4">
+      <div class="text-xl font-semibold">FileSize</div>
+      <div class="flex flex-col gap-4 md:flex-row">
+        <InputGroup>
+          <Tag value="Byte" class="w-12" />
+          <InputText type="number" v-model="byte" @input="updateValues($event.target.value, 'byte')" />
+        </InputGroup>
+      </div>
+      <div class="flex flex-col gap-4 md:flex-row">
+        <InputGroup>
+          <Tag value="KB" severity="success" class="w-12" />
+          <InputText type="number" v-model="kb" @input="updateValues($event.target.value, 'kb')" />
+        </InputGroup>
+      </div>
+      <div class="flex flex-col gap-4 md:flex-row">
+        <InputGroup>
+          <Tag value="MB" severity="warn" class="w-12" />
+          <InputText type="number" v-model="mb" @input="updateValues($event.target.value, 'mb')" />
+        </InputGroup>
+      </div>
+      <div class="flex flex-col gap-4 md:flex-row">
+        <InputGroup>
+          <Tag value="GB" severity="danger" class="w-12" />
+          <InputText type="number" v-model="gb" @input="updateValues($event.target.value, 'gb')" />
+        </InputGroup>
+      </div>
+      <div class="flex flex-col gap-4 md:flex-row">
+        <InputGroup>
+          <Tag value="TB" severity="secondary" class="w-12" />
+          <InputText type="number" v-model="tb" @input="updateValues($event.target.value, 'tb')" />
+        </InputGroup>
       </div>
     </div>
-  </Fluid>
+  </div>
 </template>

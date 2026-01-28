@@ -25,8 +25,8 @@
     <AppTopbar />
     <AppSidebar />
     <div class="layout-main-container">
-      <div class="mb-4 flex items-center justify-center">
-        <ins class="kakao_ad_area" style="display: none" data-ad-unit="DAN-AaSJlRVkpgNkrZjv" data-ad-width="320" data-ad-height="50"></ins>
+      <div class="flex items-center justify-center">
+        <ins class="kakao_ad_area mb-4" style="display: none" data-ad-unit="DAN-AaSJlRVkpgNkrZjv" data-ad-width="320" data-ad-height="50"></ins>
         <scriptx src="//t1.daumcdn.net/kas/static/ba.min.js" async />
       </div>
       <div class="layout-main">
