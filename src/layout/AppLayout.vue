@@ -26,10 +26,14 @@
     <AppSidebar />
     <div class="layout-main-container">
       <div class="mb-4 flex items-center justify-center">
-        <Adsense data-ad-client="ca-pub-8002214670454767" data-ad-slot="6356961766" ins-style="display: inline-block; width: 320px; height: 50px" />
+        <ins class="kakao_ad_area" style="display: none" data-ad-unit="DAN-AaSJlRVkpgNkrZjv" data-ad-width="320" data-ad-height="50"></ins>
+        <scriptx src="//t1.daumcdn.net/kas/static/ba.min.js" async />
       </div>
       <div class="layout-main">
         <router-view />
+        <div class="mt-4 flex items-center justify-center">
+          <Adsense data-ad-client="ca-pub-8002214670454767" data-ad-slot="6356961766" ins-style="display: inline-block; width: 320px; height: 50px" />
+        </div>
       </div>
       <AppFooter />
     </div>
