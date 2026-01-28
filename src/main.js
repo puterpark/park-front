@@ -47,9 +47,11 @@ app.use(PrimeVue, {
 app.use(ToastService);
 app.use(ConfirmationService);
 
+// Google AdSense
 app.use(ScriptX);
-app.use(Ads.AutoAdsense, { adClient: 'ca-pub-8002214670454767', isNewAdsCode: false });
+app.use(Ads.Adsense);
 
+// unhead
 const head = createHead();
 app.use(head);
 
