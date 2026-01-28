@@ -17,8 +17,16 @@ api.interceptors.response.use(
     return response.data;
   },
   async (error) => {
-    const { data } = error.response;
-    return data;
+    const { response } = error;
+    if (response) {
+      const { data } = response;
+      return data;
+    } else {
+      return {
+        code: 'E0001',
+        data: null,
+      };
+    }
   }
 );
 
