@@ -2,7 +2,7 @@
   import { computed } from 'vue';
 
   import GlobalBlockUi from '@/components/GlobalBlockUi.vue';
-  import { useLayout } from '@/layout/composables/layout';
+  import { useLayout } from '@/composables/useLayout';
 
   import AppFooter from './AppFooter.vue';
   import AppSidebar from './AppSidebar.vue';

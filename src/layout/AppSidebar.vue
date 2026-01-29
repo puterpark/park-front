@@ -2,7 +2,7 @@
   import { onBeforeUnmount, ref, watch } from 'vue';
   import { useRoute } from 'vue-router';
 
-  import { useLayout } from '@/layout/composables/layout';
+  import { useLayout } from '@/composables/useLayout';
 
   import AppMenu from './AppMenu.vue';
 
