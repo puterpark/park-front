@@ -61,7 +61,7 @@
       <div class="flex flex-col gap-4 md:flex-row">
         <InputGroup>
           <Tag value="Real" severity="success" class="w-12" />
-          <DatePicker v-model="realTime" showTime hourFormat="24" showSeconds dateFormat="yy-mm-dd" panelClass="custom-datepicker-panel" />
+          <DatePicker v-model="realTime" showTime hourFormat="24" showSeconds dateFormat="yy-mm-dd" panelClass="custom-datepicker-panel" showIcon />
         </InputGroup>
       </div>
     </div>

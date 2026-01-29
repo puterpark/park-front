@@ -85,6 +85,11 @@
           icon: 'pi pi-fw pi-calculator',
           to: '/tools/radix',
         },
+        {
+          label: 'Progress',
+          icon: 'pi pi-fw pi-wave-pulse',
+          to: '/tools/progress',
+        },
       ],
     },
   ]);

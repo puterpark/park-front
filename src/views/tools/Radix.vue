@@ -1,5 +1,5 @@
 <script setup>
-  import { nextTick, onMounted, ref, watch } from 'vue';
+  import { onMounted, ref, watch } from 'vue';
 
   import { useSeo } from '@/composables/useSeo';
 
@@ -11,7 +11,7 @@
   const hexadecimal = ref('');
   const useUpperCase = ref(true);
 
-  const updateValues = (baseValue, unitType) => {
+  const updateValues = (base, unitType) => {
     const regEx = {
       decimal: /[^0-9]/g,
       binary: /[^0-1]/g,
@@ -19,27 +19,25 @@
       hexadecimal: /[^0-9a-fA-F]/g,
     };
 
-    const cleanValue = baseValue.replace(regEx[unitType], '');
+    const baseValue = base.replace(regEx[unitType], '');
 
-    if (!cleanValue) {
+    if (!baseValue) {
       clearAll();
       return;
     }
 
     const refs = { decimal, binary, octal, hexadecimal };
-    refs[unitType].value = cleanValue;
+    refs[unitType].value = baseValue;
 
     try {
-      // 1. parseInt 대신 BigInt를 사용하여 값 파싱
       let decimalValue;
       if (unitType === 'decimal') {
-        decimalValue = BigInt(cleanValue);
+        decimalValue = BigInt(baseValue);
       } else {
         const prefix = { binary: '0b', octal: '0o', hexadecimal: '0x' };
-        decimalValue = BigInt(prefix[unitType] + cleanValue);
+        decimalValue = BigInt(prefix[unitType] + baseValue);
       }
 
-      // 2. 각 진법으로 변환 (BigInt는 toString(radix)를 완벽히 지원함)
       decimal.value = decimalValue.toString(10);
       binary.value = decimalValue.toString(2);
       octal.value = decimalValue.toString(8);
@@ -53,14 +51,6 @@
 
   const clearAll = () => {
     decimal.value = binary.value = octal.value = hexadecimal.value = '';
-  };
-
-  const onCompositionStart = (event) => {
-    event.target.blur();
-
-    nextTick(() => {
-      event.target.focus();
-    });
   };
 
   onMounted(() => {
@@ -82,25 +72,25 @@
       <div class="flex flex-col gap-4 md:flex-row">
         <InputGroup>
           <Tag value="10진수" class="w-16" />
-          <InputText v-model="decimal" v-keyfilter="/[0-9]/" @input="updateValues($event.target.value, 'decimal')" />
+          <InputText v-model="decimal" v-keyfilter="/[0-9]/" @valueChange="updateValues(decimal, 'decimal')" />
         </InputGroup>
       </div>
       <div class="flex flex-col gap-4 md:flex-row">
         <InputGroup>
           <Tag value="2진수" severity="success" class="w-16" />
-          <InputText v-model="binary" v-keyfilter="/[0-1]/" @input="updateValues($event.target.value, 'binary')" />
+          <InputText v-model="binary" v-keyfilter="/[0-1]/" @valueChange="updateValues(binary, 'binary')" />
         </InputGroup>
       </div>
       <div class="flex flex-col gap-4 md:flex-row">
         <InputGroup>
           <Tag value="8진수" severity="warn" class="w-16" />
-          <InputText v-model="octal" v-keyfilter="/[0-7]/" @input="updateValues($event.target.value, 'octal')" />
+          <InputText v-model="octal" v-keyfilter="/[0-7]/" @valueChange="updateValues(octal, 'octal')" />
         </InputGroup>
       </div>
       <div class="flex flex-col gap-4 md:flex-row">
         <InputGroup>
           <Tag value="16진수" severity="danger" class="w-16" />
-          <InputText v-model="hexadecimal" v-keyfilter="/[0-9a-fA-F]/" @input="updateValues($event.target.value, 'hexadecimal')" />
+          <InputText v-model="hexadecimal" v-keyfilter="/[0-9a-fA-F]/" @valueChange="updateValues(hexadecimal, 'hexadecimal')" />
           <InputGroupAddon>
             <Checkbox v-model="useUpperCase" :binary="true" v-tooltip.top="'체크 시 대문자 표기'" />
           </InputGroupAddon>

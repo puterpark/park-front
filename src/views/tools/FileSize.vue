@@ -20,21 +20,21 @@
 
   const UNIT = new Decimal(1024);
 
-  const updateValues = (baseValue, unitType) => {
+  const updateValues = (base, unitType) => {
     try {
-      if (baseValue === '' || baseValue === null) {
+      if (base === '' || base === null) {
         clearAll();
         return;
       }
 
-      let base = new Decimal(baseValue);
+      let baseValue = new Decimal(base);
 
       let byteVal;
-      if (unitType === 'byte') byteVal = base;
-      else if (unitType === 'kb') byteVal = base.times(UNIT);
-      else if (unitType === 'mb') byteVal = base.times(UNIT.pow(2));
-      else if (unitType === 'gb') byteVal = base.times(UNIT.pow(3));
-      else if (unitType === 'tb') byteVal = base.times(UNIT.pow(4));
+      if (unitType === 'byte') byteVal = baseValue;
+      else if (unitType === 'kb') byteVal = baseValue.times(UNIT);
+      else if (unitType === 'mb') byteVal = baseValue.times(UNIT.pow(2));
+      else if (unitType === 'gb') byteVal = baseValue.times(UNIT.pow(3));
+      else if (unitType === 'tb') byteVal = baseValue.times(UNIT.pow(4));
 
       byte.value = byteVal.toFixed();
       kb.value = byteVal.div(UNIT).toFixed();
@@ -56,31 +56,31 @@
       <div class="flex flex-col gap-4 md:flex-row">
         <InputGroup>
           <Tag value="Byte" class="w-12" />
-          <InputText type="number" v-model="byte" @input="updateValues($event.target.value, 'byte')" />
+          <InputText type="number" v-model="byte" @valueChange="updateValues(byte, 'byte')" />
         </InputGroup>
       </div>
       <div class="flex flex-col gap-4 md:flex-row">
         <InputGroup>
           <Tag value="KB" severity="success" class="w-12" />
-          <InputText type="number" v-model="kb" @input="updateValues($event.target.value, 'kb')" />
+          <InputText type="number" v-model="kb" @valueChange="updateValues(kb, 'kb')" />
         </InputGroup>
       </div>
       <div class="flex flex-col gap-4 md:flex-row">
         <InputGroup>
           <Tag value="MB" severity="warn" class="w-12" />
-          <InputText type="number" v-model="mb" @input="updateValues($event.target.value, 'mb')" />
+          <InputText type="number" v-model="mb" @valueChange="updateValues(mb, 'mb')" />
         </InputGroup>
       </div>
       <div class="flex flex-col gap-4 md:flex-row">
         <InputGroup>
           <Tag value="GB" severity="danger" class="w-12" />
-          <InputText type="number" v-model="gb" @input="updateValues($event.target.value, 'gb')" />
+          <InputText type="number" v-model="gb" @valueChange="updateValues(gb, 'gb')" />
         </InputGroup>
       </div>
       <div class="flex flex-col gap-4 md:flex-row">
         <InputGroup>
           <Tag value="TB" severity="secondary" class="w-12" />
-          <InputText type="number" v-model="tb" @input="updateValues($event.target.value, 'tb')" />
+          <InputText type="number" v-model="tb" @valueChange="updateValues(tb, 'tb')" />
         </InputGroup>
       </div>
     </div>
