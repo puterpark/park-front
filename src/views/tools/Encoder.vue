@@ -1,9 +1,10 @@
 <script setup>
+  import { computed, ref } from 'vue';
+
   import { useAppToast } from '@/composables/useAppToast';
   import { useSeo } from '@/composables/useSeo';
   import { copyText } from '@/utils/commonUtils';
   import { encoder } from '@/utils/encoder';
-  import { computed, ref } from 'vue';
 
   useSeo(
     '입력한 문자열을 다양하게 인코딩 또는 디코딩해 URL를 입력하여 짧은 링크(shortenURL)를 생성해 보세요.',

@@ -1,16 +1,18 @@
-import { definePreset } from '@primeuix/themes';
-import Aura from '@primeuix/themes/aura';
-
-import '@/assets/styles.scss';
-import '@/assets/tailwind.css';
-import { createHead } from '@unhead/vue/client';
+import { createApp } from 'vue';
+import Ads from 'vue-google-adsense';
+import ScriptX from 'vue-scriptx';
 
 import PrimeVue from 'primevue/config';
 import ConfirmationService from 'primevue/confirmationservice';
 import ToastService from 'primevue/toastservice';
-import { createApp } from 'vue';
-import Ads from 'vue-google-adsense';
-import ScriptX from 'vue-scriptx';
+
+import { definePreset } from '@primeuix/themes';
+import Aura from '@primeuix/themes/aura';
+
+import { createHead } from '@unhead/vue/client';
+
+import '@/assets/styles.scss';
+import '@/assets/tailwind.css';
 
 import App from './App.vue';
 import router from './router';

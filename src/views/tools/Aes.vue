@@ -1,10 +1,12 @@
 <script setup>
+  import { ref } from 'vue';
+
+  import { decryptWithAes, encryptWithAes } from '@/api/aes';
+  import { useApiWrapper } from '@/composables/useApiWrapper';
   import { useAppToast } from '@/composables/useAppToast';
   import { useSeo } from '@/composables/useSeo';
   import { copyText, getErrorMsg } from '@/utils/commonUtils';
   import { validateIv, validateSecretKey } from '@/utils/validateUtils';
-  import { ref } from 'vue';
-  import { decryptWithAes, encryptWithAes } from '@/api/aes';
 
   useSeo(
     '입력한 문자열을 AES 암호화 또는 복호화 해 보세요.',
@@ -12,6 +14,8 @@
   );
 
   const toast = useAppToast();
+  const { withLoading } = useApiWrapper();
+
   const plainText = ref('');
   const secretKey = ref('');
   const iv = ref('');
@@ -37,19 +41,21 @@
       return toast.error('iv', '16자리 영문자, 숫자, 특수문자만 사용할 수 있습니다.');
     }
 
-    const params = {
-      plainText: plainTextValue,
-      secretKey: secretKeyValue,
-      iv: ivValue,
-      useBase64: useBase64.value.includes('Y') ? 'Y' : 'N',
-    };
+    await withLoading(async () => {
+      const params = {
+        plainText: plainTextValue,
+        secretKey: secretKeyValue,
+        iv: ivValue,
+        useBase64: useBase64.value.includes('Y') ? 'Y' : 'N',
+      };
 
-    const { code, data } = await encryptWithAes(params);
-    if (code === 'S0000') {
-      returnText.value = data.encText;
-    } else {
-      toast.error(getErrorMsg(code));
-    }
+      const { code, data } = await encryptWithAes(params);
+      if (code === 'S0000') {
+        returnText.value = data.encText;
+      } else {
+        toast.error(getErrorMsg(code));
+      }
+    });
   };
 
   // 복호화
@@ -71,19 +77,21 @@
       return toast.error('iv', '16자리 영문자, 숫자, 특수문자만 사용할 수 있습니다.');
     }
 
-    const params = {
-      encText: plainTextValue,
-      secretKey: secretKeyValue,
-      iv: ivValue,
-      useBase64: useBase64.value.includes('Y') ? 'Y' : 'N',
-    };
+    await withLoading(async () => {
+      const params = {
+        encText: plainTextValue,
+        secretKey: secretKeyValue,
+        iv: ivValue,
+        useBase64: useBase64.value.includes('Y') ? 'Y' : 'N',
+      };
 
-    const { code, data } = await decryptWithAes(params);
-    if (code === 'S0000') {
-      returnText.value = data.decText;
-    } else {
-      toast.error(getErrorMsg(code));
-    }
+      const { code, data } = await decryptWithAes(params);
+      if (code === 'S0000') {
+        returnText.value = data.decText;
+      } else {
+        toast.error(getErrorMsg(code));
+      }
+    });
   };
 
   const handleCopy = async (text) => {
@@ -124,12 +132,14 @@
           </div>
         </div>
       </div>
-      <div class="flex flex-col gap-4 pt-4">
-        <div class="flex flex-row gap-4">
-          <Button label="암호화" severity="contrast" @click="encrypt()" />
-          <Button label="복호화" severity="secondary" @click="decrypt()" />
+      <Fluid>
+        <div class="flex flex-col gap-4 pt-4">
+          <div class="flex flex-row gap-4">
+            <Button label="암호화" severity="contrast" @click="encrypt()" />
+            <Button label="복호화" severity="secondary" @click="decrypt()" />
+          </div>
         </div>
-      </div>
+      </Fluid>
       <div class="flex flex-wrap gap-4 pt-4">
         <div class="flex grow basis-0 flex-col gap-4">
           <div>

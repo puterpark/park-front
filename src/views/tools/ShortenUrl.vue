@@ -1,14 +1,17 @@
 <script setup>
+  import { ref } from 'vue';
+
   import { createShortenUrl } from '@/api/shortenUrl';
+  import { useApiWrapper } from '@/composables/useApiWrapper';
   import { useAppToast } from '@/composables/useAppToast';
   import { useSeo } from '@/composables/useSeo';
   import { copyText, getErrorMsg } from '@/utils/commonUtils';
   import { validateUrl } from '@/utils/validateUtils';
-  import { ref } from 'vue';
 
   useSeo('URL를 입력하여 짧은 링크(shortenURL)를 생성해 보세요.', 'shortenURL, 짧은 링크, 단축 링크');
 
   const toast = useAppToast();
+  const { withLoading } = useApiWrapper();
 
   const orgUrl = ref('');
   const shortenUrl = ref('');
@@ -22,14 +25,15 @@
       return toast.error('유효하지 않은 URL 형식입니다.');
     }
 
-    const params = { orgUrl: orgUrl.value };
-
-    const { code, data } = await createShortenUrl(params);
-    if (code === 'S0000') {
-      shortenUrl.value = `${window.location.origin}/s/${data.shortenUri}`;
-    } else {
-      toast.error(getErrorMsg(code));
-    }
+    await withLoading(async () => {
+      const params = { orgUrl: orgUrl.value };
+      const { code, data } = await createShortenUrl(params);
+      if (code === 'S0000') {
+        shortenUrl.value = `${window.location.origin}/s/${data.shortenUri}`;
+      } else {
+        toast.error(getErrorMsg(code));
+      }
+    });
   };
 
   const handleCopy = async (uri) => {

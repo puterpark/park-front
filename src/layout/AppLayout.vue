@@ -1,6 +1,7 @@
 <script setup>
   import { computed } from 'vue';
 
+  import GlobalBlockUi from '@/components/GlobalBlockUi.vue';
   import { useLayout } from '@/layout/composables/layout';
 
   import AppFooter from './AppFooter.vue';
@@ -40,4 +41,5 @@
     <div class="layout-mask animate-fadein" @click="hideMobileMenu" />
   </div>
   <Toast />
+  <GlobalBlockUi />
 </template>

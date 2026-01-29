@@ -1,7 +1,8 @@
+import { createRouter, createWebHistory } from 'vue-router';
+
 import AppLayout from '@/layout/AppLayout.vue';
 import Empty from '@/views/Empty.vue';
 import NotFound from '@/views/NotFound.vue';
-import { createRouter, createWebHistory } from 'vue-router';
 
 const childrenRoutes = [
   {

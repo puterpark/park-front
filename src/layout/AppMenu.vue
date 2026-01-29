@@ -1,10 +1,11 @@
 <script setup>
   import { onMounted, ref } from 'vue';
 
-  import AppMenuItem from './AppMenuItem.vue';
   import { getIp } from '@/api/ip';
-  import { copyText } from '@/utils/commonUtils';
   import { useAppToast } from '@/composables/useAppToast';
+  import { copyText } from '@/utils/commonUtils';
+
+  import AppMenuItem from './AppMenuItem.vue';
 
   const toast = useAppToast();
   const ip = ref('');

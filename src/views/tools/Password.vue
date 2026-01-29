@@ -1,8 +1,9 @@
 <script setup>
+  import { computed, ref } from 'vue';
+
   import { useAppToast } from '@/composables/useAppToast';
   import { useSeo } from '@/composables/useSeo';
   import { copyText } from '@/utils/commonUtils';
-  import { computed, ref } from 'vue';
 
   useSeo('다양한 조건으로 비밀번호를 생성해 보세요.', '비밀번호, 비밀번호 생성, 비밀번호 생성기, Password, Password Generate, Password Generator');
 

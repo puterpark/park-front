@@ -1,7 +1,9 @@
 <script setup>
-  import { useSeo } from '@/composables/useSeo';
-  import Decimal from 'decimal.js';
   import { ref } from 'vue';
+
+  import Decimal from 'decimal.js';
+
+  import { useSeo } from '@/composables/useSeo';
 
   useSeo('파일크기를 다양하게 변환해 보세요.', '파일크기, 변환, 파일크기 변환, filesize, byte, kb, mb, gb, tb');
 

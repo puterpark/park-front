@@ -6,5 +6,20 @@
   "vueIndentScriptAndStyle": true,
   "printWidth": 200,
   "htmlWhitespaceSensitivity": "ignore",
-  "plugins": ["prettier-plugin-tailwindcss"]
+  "plugins": [
+    "@trivago/prettier-plugin-sort-imports",
+    "prettier-plugin-tailwindcss"
+  ],
+  "importOrder": [
+    "^vue",
+    "^primevue/(.*)$",
+    "^@primeuix/(.*)$",
+    "<THIRD_PARTY_MODULES>",
+    "^@/(.*)$",
+    "^[./]",
+    ".css$",
+    ".scss$"
+  ],
+  "importOrderSeparation": true,
+  "importOrderSortSpecifiers": true
 }

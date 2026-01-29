@@ -65,7 +65,15 @@
       <span class="layout-menuitem-text">{{ item.label }}</span>
       <i class="pi pi-fw pi-angle-down layout-submenu-toggler" v-if="item.items" />
     </a>
-    <router-link v-if="item.to && !item.items && item.visible !== false" @click="itemClick($event, item)" exactActiveClass="active-route" :class="item.class" tabindex="0" :to="item.to" @mouseenter="onMouseEnter">
+    <router-link
+      v-if="item.to && !item.items && item.visible !== false"
+      @click="itemClick($event, item)"
+      exactActiveClass="active-route"
+      :class="item.class"
+      tabindex="0"
+      :to="item.to"
+      @mouseenter="onMouseEnter"
+    >
       <i :class="item.icon" class="layout-menuitem-icon" />
       <span class="layout-menuitem-text">{{ item.label }}</span>
       <i class="pi pi-fw pi-angle-down layout-submenu-toggler" v-if="item.items" />
