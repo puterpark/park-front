@@ -50,6 +50,11 @@ const childrenRoutes = [
     name: 'fileSize',
     component: () => import('@/views/tools/FileSize.vue'),
   },
+  {
+    path: '/tools/radix',
+    name: 'radix',
+    component: () => import('@/views/tools/Radix.vue'),
+  },
 ];
 
 const toolPaths = childrenRoutes.filter((route) => route.path.startsWith('/tools/')).map((route) => route.path);

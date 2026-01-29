@@ -55,7 +55,7 @@
       <div class="flex flex-col gap-4 md:flex-row">
         <InputGroup>
           <Tag value="Unix" class="w-12" />
-          <InputNumber v-model="unixTime" showButtons mode="decimal" :useGrouping="false" @input="updateUnixTime" />
+          <InputNumber v-model="unixTime" showButtons mode="decimal" :useGrouping="false" @input="updateUnixTime" :max="9999999999" />
         </InputGroup>
       </div>
       <div class="flex flex-col gap-4 md:flex-row">

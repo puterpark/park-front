@@ -80,6 +80,11 @@
           icon: 'pi pi-fw pi-sync',
           to: '/tools/file-size',
         },
+        {
+          label: 'Radix',
+          icon: 'pi pi-fw pi-calculator',
+          to: '/tools/radix',
+        },
       ],
     },
   ]);
