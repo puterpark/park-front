@@ -7,7 +7,7 @@
   import AppTopbar from '@/layout/AppTopbar.vue';
   import AdminSidebar from '@/layout/admin/AdminSidebar.vue';
 
-  const { layoutConfig, layoutState } = useLayout();
+  const { layoutConfig, layoutState, hideMobileMenu } = useLayout();
 
   const containerClass = computed(() => {
     return {
@@ -30,6 +30,7 @@
       </div>
       <AppFooter />
     </div>
+    <div class="layout-mask animate-fadein" @click="hideMobileMenu" />
   </div>
   <Toast />
   <GlobalBlockUi />

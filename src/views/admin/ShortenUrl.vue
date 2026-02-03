@@ -114,13 +114,7 @@
   const totalCount = ref(0);
   const shortenUrls = ref(null);
   const loading = ref(null);
-  const cm = ref();
-  const selectedRow = ref();
   const shortenUrl = ref(null);
-  const menuModel = ref([
-    { label: '상세', icon: 'pi pi-fw pi-search', command: () => showDetailDialog(selectedRow) },
-    { label: '삭제', icon: 'pi pi-fw pi-times', command: () => confirmDelete(selectedRow) },
-  ]);
   const detailDialog = ref(false);
   const deleteDialog = ref(false);
   const searchWord = ref('');
@@ -143,20 +137,10 @@
     }
   };
 
-  // context menu 오픈
-  const onRowContextMenu = (event) => {
-    cm.value.show(event.originalEvent);
-  };
-
-  // 다이얼로그
+  // 상세 다이얼로그
   const showDetailDialog = (data) => {
-    shortenUrl.value = { ...data.value };
+    shortenUrl.value = { ...data };
     detailDialog.value = true;
-  };
-
-  // 다이얼로그 숨김
-  const hideDetailDialog = () => {
-    detailDialog.value = false;
   };
 
   // 수정
@@ -180,9 +164,20 @@
     });
   };
 
-  // 삭제 컨펌
+  // splitButton model
+  const getMenuItems = (data) => [
+    {
+      label: '삭제',
+      icon: 'pi pi-times',
+      command: () => {
+        confirmDelete(data);
+      },
+    },
+  ];
+
+  // 삭제 다이얼로그
   const confirmDelete = (data) => {
-    shortenUrl.value = data.value;
+    shortenUrl.value = data;
     deleteDialog.value = true;
   };
 
@@ -260,23 +255,10 @@
   </div>
   <div class="mt-8 flex">
     <div class="card flex w-full flex-col gap-4">
-      <ContextMenu ref="cm" :model="menuModel" @hide="selectedRow = null" />
-      <DataTable
-        :value="shortenUrls"
-        :paginator="true"
-        :rows="500"
-        dataKey="id"
-        :rowHover="true"
-        :loading="loading"
-        showGridlines
-        stripedRows
-        contextMenu
-        v-model:contextMenuSelection="selectedRow"
-        @rowContextmenu="onRowContextMenu"
-      >
+      <DataTable :value="shortenUrls" :paginator="true" :rows="500" dataKey="id" :rowHover="true" :loading="loading" showGridlines stripedRows>
         <template #header>
           <div class="flex justify-between">
-            <Button type="button" text>총 {{ totalCount }} 개</Button>
+            <Tag severity="secondary">{{ totalCount }}</Tag>
             <IconField>
               <InputIcon>
                 <i class="pi pi-search" />
@@ -288,7 +270,13 @@
         <template #empty>No shortenUrl found.</template>
         <template #loading>Loading shortenUrl data. Please wait.</template>
 
-        <Column field="shortenUri" header="shortenUri" class="min-w-48"></Column>
+        <Column field="shortenUri" header="shortenUri" class="min-w-48">
+          <template #body="{ data }">
+            <SplitButton :model="getMenuItems(data)" severity="contrast" text @click="showDetailDialog(data)" fluid>
+              {{ data.shortenUri }}
+            </SplitButton>
+          </template>
+        </Column>
         <Column field="orgUrl" header="orgUrl" class="min-w-48"></Column>
         <Column field="lastAccessDate" header="lastAccessDate" class="min-w-48">
           <template #body="{ data }">
@@ -306,7 +294,7 @@
           </template>
         </Column>
       </DataTable>
-      <Dialog v-model:visible="detailDialog" :style="{ width: '450px' }" header="상세" :modal="true">
+      <Dialog v-model:visible="detailDialog" class="w-112.5" header="상세" :modal="true">
         <div class="flex flex-col gap-6">
           <div>
             <label for="shortenUri" class="mb-3 block font-bold">shortenUri</label>
@@ -320,17 +308,17 @@
           </div>
         </div>
         <template #footer>
-          <Button label="취소" icon="pi pi-times" text @click="hideDetailDialog" />
+          <Button label="취소" icon="pi pi-times" text @click="detailDialog = false" />
           <Button label="수정" icon="pi pi-check" @click="updateShortenUrl" />
         </template>
       </Dialog>
-      <Dialog v-model:visible="deleteDialog" :style="{ width: '450px' }" header="확인" :modal="true">
+      <Dialog v-model:visible="deleteDialog" class="w-112.5" header="확인" :modal="true">
         <div class="flex items-center gap-4">
           <i class="pi pi-exclamation-triangle text-3xl!" />
-          <span v-if="shortenUrl">
+          <span v-if="shortenUrl" class="text-500 w-full truncate">
             삭제하시겠습니까?
             <br />
-            <b>{{ shortenUrl.orgUrl }}</b>
+            <b :title="shortenUrl.orgUrl">{{ shortenUrl.orgUrl }}</b>
           </span>
         </div>
         <template #footer>
