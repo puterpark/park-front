@@ -13,6 +13,7 @@ import { createHead } from '@unhead/vue/client';
 
 import '@/assets/styles.scss';
 import '@/assets/tailwind.css';
+import pinia from '@/stores';
 
 import App from './App.vue';
 import router from './router';
@@ -56,5 +57,8 @@ app.use(Ads.Adsense);
 // unhead
 const head = createHead();
 app.use(head);
+
+// pinia
+app.use(pinia);
 
 app.mount('#app');

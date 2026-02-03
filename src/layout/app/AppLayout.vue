@@ -4,9 +4,9 @@
   import GlobalBlockUi from '@/components/GlobalBlockUi.vue';
   import { useLayout } from '@/composables/useLayout';
 
-  import AppFooter from './AppFooter.vue';
+  import AppFooter from '../AppFooter.vue';
+  import AppTopbar from '../AppTopbar.vue';
   import AppSidebar from './AppSidebar.vue';
-  import AppTopbar from './AppTopbar.vue';
 
   const { layoutConfig, layoutState, hideMobileMenu } = useLayout();
 

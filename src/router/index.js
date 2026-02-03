@@ -1,10 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
-import AppLayout from '@/layout/AppLayout.vue';
+import AdminLayout from '@/layout/admin/AdminLayout.vue';
+import AppLayout from '@/layout/app/AppLayout.vue';
+import { useAdminStore } from '@/stores/useAdminStore';
 import Empty from '@/views/Empty.vue';
 import NotFound from '@/views/NotFound.vue';
 
-const childrenRoutes = [
+const appChildren = [
   {
     path: '/',
     name: 'empty',
@@ -62,8 +64,8 @@ const childrenRoutes = [
   },
 ];
 
-const toolPaths = childrenRoutes.filter((route) => route.path.startsWith('/tools/')).map((route) => route.path);
-const emptyRoute = childrenRoutes.find((route) => route.name === 'empty');
+const toolPaths = appChildren.filter((route) => route.path.startsWith('/tools/')).map((route) => route.path);
+const emptyRoute = appChildren.find((route) => route.name === 'empty');
 if (emptyRoute) {
   emptyRoute.beforeEnter = (to, from, next) => {
     const randomPath = toolPaths[Math.floor(Math.random() * toolPaths.length)];
@@ -74,11 +76,32 @@ if (emptyRoute) {
 const router = createRouter({
   history: createWebHistory(),
   routes: [
+    // app
     {
       path: '/',
       component: AppLayout,
-      children: childrenRoutes,
+      children: appChildren,
     },
+    // admin
+    {
+      path: '/admin/login',
+      name: 'adminLogin',
+      component: () => import('@/views/admin/Login.vue'),
+    },
+    {
+      path: '/admin',
+      component: AdminLayout,
+      redirect: '/admin/shorten-url',
+      meta: { requiresAuth: true },
+      children: [
+        {
+          path: '/admin/shorten-url',
+          name: 'adminShortenUrl',
+          component: () => import('@/views/admin/ShortenUrl.vue'),
+        },
+      ],
+    },
+    // common
     {
       path: '/:pathMatch(.*)*',
       name: 'notFound',
@@ -88,6 +111,32 @@ const router = createRouter({
   scrollBehavior() {
     return { top: 0 };
   },
+});
+
+// 전역 가드 설정
+router.beforeEach((to, from, next) => {
+  if (to.name === 'notFound') {
+    return next();
+  }
+
+  const adminStore = useAdminStore();
+  const isAuthenticated = adminStore.isAuthenticated;
+
+  // 미인증
+  if (!isAuthenticated) {
+    if (to.meta?.requiresAuth) {
+      return next('/admin/login');
+    }
+
+    return next();
+  }
+
+  // 인증 + 로그인 페이지 접근 시
+  if (to.name === 'adminLogin' && isAuthenticated) {
+    return next('/admin');
+  }
+
+  next();
 });
 
 export default router;

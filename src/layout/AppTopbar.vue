@@ -1,7 +1,15 @@
 <script setup>
   import { useLayout } from '@/composables/useLayout';
+  import { useAdminStore } from '@/stores/useAdminStore';
 
   const { toggleMenu, toggleDarkMode, isDarkTheme } = useLayout();
+
+  const isAuthenticated = useAdminStore().isAuthenticated;
+
+  const logout = () => {
+    useAdminStore().logout();
+    window.location.href = '/';
+  };
 </script>
 
 <template>
@@ -21,9 +29,9 @@
         <button type="button" class="layout-topbar-action" @click="toggleDarkMode">
           <i :class="['pi', { 'pi-moon': isDarkTheme, 'pi-sun': !isDarkTheme }]"></i>
         </button>
-        <button type="button" class="layout-topbar-action">
-          <i class="pi pi-user"></i>
-          <span>Profile</span>
+        <button v-if="isAuthenticated" type="button" class="layout-topbar-action" @click="logout">
+          <i class="pi pi-sign-out"></i>
+          <span>Log Out</span>
         </button>
       </div>
     </div>
