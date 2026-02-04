@@ -1,10 +1,10 @@
 import { computed, reactive } from 'vue';
+import { useLayoutStore } from '@/stores/useLayoutStore';
 
 const layoutConfig = reactive({
   preset: 'Aura',
   primary: 'blue',
   surface: null,
-  darkTheme: false,
   menuMode: 'static',
 });
 
@@ -20,19 +20,14 @@ const layoutState = reactive({
 });
 
 export function useLayout() {
+  const layoutStore = useLayoutStore();
+
   const toggleDarkMode = () => {
     if (!document.startViewTransition) {
-      executeDarkModeToggle();
-
+      layoutStore.toggleDarkMode();
       return;
     }
-
-    document.startViewTransition(() => executeDarkModeToggle(event));
-  };
-
-  const executeDarkModeToggle = () => {
-    layoutConfig.darkTheme = !layoutConfig.darkTheme;
-    document.documentElement.classList.toggle('app-dark');
+    document.startViewTransition(() => layoutStore.toggleDarkMode());
   };
 
   const toggleMenu = () => {
@@ -66,7 +61,7 @@ export function useLayout() {
     layoutState.anchored = false;
   };
 
-  const isDarkTheme = computed(() => layoutConfig.darkTheme);
+  const isDarkTheme = computed(() => layoutStore.isDarkTheme);
   const isDesktop = () => window.innerWidth > 991;
 
   const hasOpenOverlay = computed(() => layoutState.overlayMenuActive);
