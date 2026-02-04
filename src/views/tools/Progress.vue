@@ -1,11 +1,13 @@
 <script setup>
   import { ref } from 'vue';
-
   import dayjs from 'dayjs';
-
   import { useSeo } from '@/composables/useSeo';
 
-  useSeo('날짜를 설정하여 진행상태를 확인해 보세요.', '시작일, 기준일, 종료일, 진행, 진행상태');
+  useSeo({
+    title: 'Progress',
+    description: '날짜를 설정하여 진행상태를 확인해 보세요.',
+    keywords: '시작일, 기준일, 종료일, 진행, 진행상태',
+  });
 
   const startDate = ref('');
   const stdDate = ref(dayjs().format('YYYY-MM-DD'));

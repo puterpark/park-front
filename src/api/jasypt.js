@@ -2,7 +2,7 @@ import api from '@/api';
 import { API_URI } from '@/api/apiUri';
 
 // jasypt 암호화
-export const encryptWithJasypt = (params) => {
+export const encryptWithJasyptApi = (params) => {
   return api.post(API_URI.JASYPT.ENCRYPT, params);
 };
 

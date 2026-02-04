@@ -20,6 +20,6 @@
     ".css$",
     ".scss$"
   ],
-  "importOrderSeparation": true,
+  "importOrderSeparation": false,
   "importOrderSortSpecifiers": true
 }

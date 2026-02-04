@@ -1,7 +1,7 @@
 <script setup>
   import { onMounted, ref } from 'vue';
 
-  import { getIp } from '@/api/ip';
+  import { getIpApi } from '@/api/ip';
   import { useAppToast } from '@/composables/useAppToast';
   import { copyText } from '@/utils/commonUtils';
 
@@ -95,7 +95,7 @@
   ]);
 
   onMounted(async () => {
-    const { code, data } = await getIp();
+    const { code, data } = await getIpApi();
     ip.value = code === 'S0000' ? data.ip : '';
   });
 

@@ -1,17 +1,18 @@
 <script setup>
   import { ref } from 'vue';
-
-  import { decryptWithAes, encryptWithAes } from '@/api/aes';
+  import { decryptWithAesApi, encryptWithAesApi } from '@/api/aes';
   import { useApiWrapper } from '@/composables/useApiWrapper';
   import { useAppToast } from '@/composables/useAppToast';
   import { useSeo } from '@/composables/useSeo';
   import { copyText, getErrorMsg } from '@/utils/commonUtils';
   import { validateIv, validateSecretKey } from '@/utils/validateUtils';
 
-  useSeo(
-    '입력한 문자열을 AES 암호화 또는 복호화 해 보세요.',
-    'aes, aes128, aes192, aes256, encrypt, decrypt, 암호화, 복호화, aes encrypt, aes decrypt, aes128 encrypt, aes128 decrypt, aes192 encrypt, aes192 decrypt, aes256 encrypt, aes256 decrypt, aes 암호화, aes 복호화, aes128 암호화, aes128 복호화, aes192 암호화, aes192 복호화, aes256 암호화, aes256 복호화'
-  );
+  useSeo({
+    title: 'Aes',
+    description: '입력한 문자열을 AES 암호화 또는 복호화 해 보세요.',
+    keywords:
+      'aes, aes128, aes192, aes256, encrypt, decrypt, 암호화, 복호화, aes encrypt, aes decrypt, aes128 encrypt, aes128 decrypt, aes192 encrypt, aes192 decrypt, aes256 encrypt, aes256 decrypt, aes 암호화, aes 복호화, aes128 암호화, aes128 복호화, aes192 암호화, aes192 복호화, aes256 암호화, aes256 복호화',
+  });
 
   const toast = useAppToast();
   const { withLoading } = useApiWrapper();
@@ -49,7 +50,7 @@
         useBase64: useBase64.value.includes('Y') ? 'Y' : 'N',
       };
 
-      const { code, data } = await encryptWithAes(params);
+      const { code, data } = await encryptWithAesApi(params);
       if (code === 'S0000') {
         returnText.value = data.encText;
       } else {
@@ -85,7 +86,7 @@
         useBase64: useBase64.value.includes('Y') ? 'Y' : 'N',
       };
 
-      const { code, data } = await decryptWithAes(params);
+      const { code, data } = await decryptWithAesApi(params);
       if (code === 'S0000') {
         returnText.value = data.decText;
       } else {

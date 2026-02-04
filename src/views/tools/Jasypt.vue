@@ -1,14 +1,17 @@
 <script setup>
   import { ref } from 'vue';
-
-  import { decryptWithJasypt, encryptWithJasypt } from '@/api/jasypt';
+  import { decryptWithJasypt, encryptWithJasyptApi } from '@/api/jasypt';
   import { useApiWrapper } from '@/composables/useApiWrapper';
   import { useAppToast } from '@/composables/useAppToast';
   import { useSeo } from '@/composables/useSeo';
   import { copyText, getErrorMsg } from '@/utils/commonUtils';
   import { validateSecretKey } from '@/utils/validateUtils';
 
-  useSeo('입력한 문자열을 jasypt 암호화 또는 복호화 해 보세요.', 'jasypt, encrypt, decrypt, jasypt 암호화, jasypt 복호화, jasypt encrypt, jasypt decrypt');
+  useSeo({
+    title: 'Jasypt',
+    description: '입력한 문자열을 jasypt 암호화 또는 복호화 해 보세요.',
+    keywords: 'jasypt, encrypt, decrypt, jasypt 암호화, jasypt 복호화, jasypt encrypt, jasypt decrypt',
+  });
 
   const toast = useAppToast();
   const { withLoading } = useApiWrapper();
@@ -36,7 +39,7 @@
         secretKey: secretKeyValue,
       };
 
-      const { code, data } = await encryptWithJasypt(params);
+      const { code, data } = await encryptWithJasyptApi(params);
       if (code === 'S0000') {
         returnText.value = data.encText;
       } else {

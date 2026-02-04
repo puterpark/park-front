@@ -1,14 +1,13 @@
 <script setup>
   import { onMounted, ref } from 'vue';
-
   import { deleteShortenUrlApi, getShortenUrlListApi, getShortenUrlStatisticApi, updateShortenUrlApi } from '@/api/admin';
   import { useApiWrapper } from '@/composables/useApiWrapper';
   import { useAppToast } from '@/composables/useAppToast';
   import { useBlockUi } from '@/composables/useBlockUi';
   import { getErrorMsg } from '@/utils/commonUtils';
 
-  const { blockUi, unblockUi } = useBlockUi();
   const toast = useAppToast();
+  const { blockUi, unblockUi } = useBlockUi();
   const { withLoading } = useApiWrapper();
 
   // 통게 관련

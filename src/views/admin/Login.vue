@@ -1,6 +1,5 @@
 <script setup>
   import { ref } from 'vue';
-
   import { loginApi } from '@/api/admin';
   import GlobalBlockUi from '@/components/GlobalBlockUi.vue';
   import { useApiWrapper } from '@/composables/useApiWrapper';
@@ -9,12 +8,12 @@
   import { useAdminStore } from '@/stores/useAdminStore';
   import { getErrorMsg } from '@/utils/commonUtils';
 
-  const username = ref('');
-  const password = ref('');
-
   const toast = useAppToast();
   const { withLoading } = useApiWrapper();
   const adminStore = useAdminStore();
+
+  const username = ref('');
+  const password = ref('');
 
   const handleLogin = async () => {
     if (!username.value || !password.value) {

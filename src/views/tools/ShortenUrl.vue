@@ -1,14 +1,17 @@
 <script setup>
   import { ref } from 'vue';
-
-  import { createShortenUrl } from '@/api/shortenUrl';
+  import { createShortenUrlApi } from '@/api/shortenUrl';
   import { useApiWrapper } from '@/composables/useApiWrapper';
   import { useAppToast } from '@/composables/useAppToast';
   import { useSeo } from '@/composables/useSeo';
   import { copyText, getErrorMsg } from '@/utils/commonUtils';
   import { validateUrl } from '@/utils/validateUtils';
 
-  useSeo('URL를 입력하여 짧은 링크(shortenURL)를 생성해 보세요.', 'shortenURL, 짧은 링크, 단축 링크');
+  useSeo({
+    title: 'Shorten URL',
+    description: 'URL를 입력하여 짧은 링크(shortenURL)를 생성해 보세요.',
+    keywords: 'shortenURL, 짧은 링크, 단축 링크',
+  });
 
   const toast = useAppToast();
   const { withLoading } = useApiWrapper();
@@ -27,7 +30,7 @@
 
     await withLoading(async () => {
       const params = { orgUrl: orgUrl.value };
-      const { code, data } = await createShortenUrl(params);
+      const { code, data } = await createShortenUrlApi(params);
       if (code === 'S0000') {
         shortenUrl.value = `${window.location.origin}/s/${data.shortenUri}`;
       } else {

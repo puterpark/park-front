@@ -1,7 +1,9 @@
 <script setup>
   import { useSeo } from '@/composables/useSeo';
 
-  useSeo('Puter의 공작소에 오신걸 환영합니다. 다양한 도구들을 사용해 보세요.');
+  useSeo({
+    description: 'Puter의 공작소에 오신걸 환영합니다. 다양한 도구들을 사용해 보세요.',
+  });
 </script>
 <template>
   <div class="card">

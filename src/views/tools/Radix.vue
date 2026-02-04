@@ -1,9 +1,12 @@
 <script setup>
   import { onMounted, ref, watch } from 'vue';
-
   import { useSeo } from '@/composables/useSeo';
 
-  useSeo('숫자를 다양한 진법으로 변환해 보세요.', '숫자, 진법, radix, 10진법, 2진법, 8진법, 16진법, number, decimal, binary, octal, hexadecimal');
+  useSeo({
+    title: 'Radix',
+    description: '숫자를 다양한 진법으로 변환해 보세요.',
+    keywords: '숫자, 진법, radix, 10진법, 2진법, 8진법, 16진법, number, decimal, binary, octal, hexadecimal',
+  });
 
   const decimal = ref('');
   const binary = ref('');

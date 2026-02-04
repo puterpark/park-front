@@ -5,6 +5,7 @@
   const { toggleMenu, toggleDarkMode, isDarkTheme } = useLayout();
 
   const isAuthenticated = useAdminStore().isAuthenticated;
+  const env = import.meta.env.VITE_ENVIRONMENT;
 
   const logout = () => {
     useAdminStore().logout();
@@ -20,7 +21,7 @@
       </button>
       <router-link to="/" class="layout-topbar-logo">
         <img src="https://cdn.puter.us/images/apple-touch-icon.png" id="icon-gear" alt="" class="w-8 rounded-sm" />
-        <span>PUTER.US</span>
+        <span>PUTER.US{{ env ? ` - ${env}` : '' }}</span>
       </router-link>
     </div>
 
