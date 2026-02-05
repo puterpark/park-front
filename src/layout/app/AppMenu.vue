@@ -1,10 +1,8 @@
 <script setup>
   import { onMounted, ref } from 'vue';
-
   import { getIpApi } from '@/api/ip';
   import { useAppToast } from '@/composables/useAppToast';
   import { copyText } from '@/utils/commonUtils';
-
   import AppMenuItem from './AppMenuItem.vue';
 
   const toast = useAppToast();
@@ -89,6 +87,11 @@
           label: 'Progress',
           icon: 'pi pi-fw pi-wave-pulse',
           to: '/tools/progress',
+        },
+        {
+          label: 'TextLength',
+          icon: 'pi pi-fw pi-align-left',
+          to: '/tools/text-length',
         },
       ],
     },

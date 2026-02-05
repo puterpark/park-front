@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router';
-
 import AdminLayout from '@/layout/admin/AdminLayout.vue';
 import AppLayout from '@/layout/app/AppLayout.vue';
 import { useAdminStore } from '@/stores/useAdminStore';
@@ -61,6 +60,11 @@ const appChildren = [
     path: '/tools/progress',
     name: 'progress',
     component: () => import('@/views/tools/Progress.vue'),
+  },
+  {
+    path: '/tools/text-length',
+    name: 'textLength',
+    component: () => import('@/views/tools/TextLength.vue'),
   },
 ];
 
