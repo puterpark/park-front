@@ -66,6 +66,11 @@ const appChildren = [
     name: 'textLength',
     component: () => import('@/views/tools/TextLength.vue'),
   },
+  {
+    path: '/tools/holiday',
+    name: 'holiday',
+    component: () => import('@/views/tools/Holiday.vue'),
+  },
 ];
 
 const toolPaths = appChildren.filter((route) => route.path.startsWith('/tools/')).map((route) => route.path);

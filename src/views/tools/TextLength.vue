@@ -50,9 +50,9 @@
           <Tag value="공백 포함" />
         </div>
         <div>
-          <span class="text-primary-700 font-bold">{{ inputDataLength }}</span>
+          <span class="text-primary-700 dark:text-primary-300 font-bold">{{ inputDataLength }}</span>
           자 /
-          <span class="text-primary-700 font-bold">{{ inputDataByte }}</span>
+          <span class="text-primary-700 dark:text-primary-300 font-bold">{{ inputDataByte }}</span>
           byte
         </div>
       </div>
@@ -61,9 +61,9 @@
           <Tag severity="success" value="공백 제외" />
         </div>
         <div>
-          <span class="font-bold text-green-700">{{ inputDataLengthWithoutSpace }}</span>
+          <span class="font-bold text-green-700 dark:text-green-300">{{ inputDataLengthWithoutSpace }}</span>
           자 /
-          <span class="font-bold text-green-700">{{ inputDataByteWithoutSpace }}</span>
+          <span class="font-bold text-green-700 dark:text-green-300">{{ inputDataByteWithoutSpace }}</span>
           byte
         </div>
       </div>

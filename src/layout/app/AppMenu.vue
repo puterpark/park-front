@@ -19,23 +19,6 @@
       ],
     },
     {
-      label: 'NAS',
-      items: [
-        {
-          label: 'sinoli',
-          icon: 'pi pi-fw pi-server',
-          url: 'https://nas.puter.us',
-          target: '_self',
-        },
-        {
-          label: 'jenkins',
-          icon: 'pi pi-fw pi-box',
-          url: 'https://jen.puter.us',
-          target: '_self',
-        },
-      ],
-    },
-    {
       label: 'TOOLS',
       items: [
         {
@@ -92,6 +75,11 @@
           label: 'TextLength',
           icon: 'pi pi-fw pi-align-left',
           to: '/tools/text-length',
+        },
+        {
+          label: 'Holiday',
+          icon: 'pi pi-fw pi-calendar',
+          to: '/tools/holiday',
         },
       ],
     },

@@ -1,3 +1,30 @@
 /* You can add global styles to this file, and also import other style files */
 @use 'primeicons/primeicons.css';
 @use '@/assets/layout/layout.scss';
+
+/* schedule-x */
+:root {
+  --sx-color-primary: var(--primary-color) !important;
+  --sx-color-on-primary: var(--p-primary-100) !important;
+  --sx-color-primary-container: var(--primary-color) !important;
+  --sx-color-on-primary-container: var(--p-primary-100) !important;
+  --sx-color-surface: color-mix(in srgb, var(--p-primary-500), transparent 84%) !important;
+  --sx-color-surface-dim: color-mix(in srgb, var(--p-primary-500), transparent 84%) !important;
+  --sx-color-surface-container: color-mix(in srgb, var(--p-primary-500), transparent 84%) !important;
+  --sx-color-surface-container-low: color-mix(in srgb, var(--p-primary-500), transparent 84%) !important;
+  --sx-color-surface-container-high: color-mix(in srgb, var(--p-primary-500), transparent 84%) !important;
+  --sx-internal-color-light-gray: color-mix(in srgb, var(--p-primary-500), transparent 84%) !important;
+}
+
+.is-dark {
+  --sx-color-primary: color-mix(in srgb, var(--p-primary-500), transparent 84%) !important;
+  --sx-color-on-primary: var(--p-primary-300) !important;
+  --sx-color-primary-container: color-mix(in srgb, var(--p-primary-500), transparent 84%) !important;
+  --sx-color-on-primary-container: var(--p-primary-300) !important;
+  --sx-color-surface: color-mix(in srgb, var(--p-primary-500), transparent 84%) !important;
+  --sx-color-surface-dim: color-mix(in srgb, var(--p-primary-500), transparent 84%) !important;
+  --sx-color-surface-container: color-mix(in srgb, var(--p-primary-500), transparent 84%) !important;
+  --sx-color-surface-container-low: color-mix(in srgb, var(--p-primary-500), transparent 84%) !important;
+  --sx-color-surface-container-high: color-mix(in srgb, var(--p-primary-500), transparent 84%) !important;
+  --sx-internal-color-light-gray: color-mix(in srgb, var(--p-primary-500), transparent 84%) !important;
+}
