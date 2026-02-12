@@ -8,6 +8,7 @@
   import axios from 'axios';
   import dayjs from 'dayjs';
   import 'temporal-polyfill/global';
+  import { API_URI } from '@/api/apiUri';
   import { useAppToast } from '@/composables/useAppToast';
   import { useBlockUi } from '@/composables/useBlockUi';
   import { useSeo } from '@/composables/useSeo';
@@ -68,7 +69,7 @@
   });
 
   const getDateRange = async () => {
-    const response = await axios.get('https://holiday-api.puter.us/holidays/years');
+    const response = await axios.get(API_URI.HOLIDAY.RANGE);
     const data = response.data;
 
     calendarControls.setMinDate(Temporal.PlainDate.from(`${data.range.from}-01-01`));
@@ -80,7 +81,7 @@
       return;
     }
 
-    const response = await axios.get(`https://holiday-api.puter.us/holidays?year=${year}`);
+    const response = await axios.get(API_URI.HOLIDAY.YEAR(year));
     const data = response.data;
 
     data.holidays.forEach((holiday) => {

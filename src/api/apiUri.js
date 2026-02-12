@@ -21,4 +21,8 @@ export const API_URI = {
     STATISTIC: '/api/v1/admin/shorten-url/statistic',
     LIST: '/api/v1/admin/shorten-url/list',
   },
+  HOLIDAY: {
+    RANGE: 'https://holiday-api.puter.us/holidays/years',
+    YEAR: (year) => `https://holiday-api.puter.us/holidays?year=${year}`,
+  },
 };
