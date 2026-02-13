@@ -1,5 +1,5 @@
+import { jwtDecode } from 'jwt-decode';
 import { defineStore } from 'pinia';
-
 import { refreshAccessTokenApi } from '@/api/admin';
 
 export const useAdminStore = defineStore('admin', {
@@ -11,7 +11,23 @@ export const useAdminStore = defineStore('admin', {
     pick: ['accessToken'],
   },
   getters: {
-    isAuthenticated: (state) => !!state.accessToken,
+    isAuthenticated: (state) => {
+      if (!state.accessToken) {
+        return false;
+      }
+
+      try {
+        const decodedToken = jwtDecode(state.accessToken);
+        if (!decodedToken || !decodedToken.exp) {
+          return false;
+        }
+
+        return decodedToken.exp * 1000 > Date.now();
+      } catch (error) {
+        console.error('Failed to decode JWT with jwt-decode:', error);
+        return false;
+      }
+    },
   },
   actions: {
     async refreshAccessToken() {

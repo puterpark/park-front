@@ -1,14 +1,16 @@
 <script setup>
+  import { computed } from 'vue';
   import { useLayout } from '@/composables/useLayout';
   import { useAdminStore } from '@/stores/useAdminStore';
 
-  const { toggleMenu, toggleDarkMode, isDarkTheme } = useLayout();
-
-  const isAuthenticated = useAdminStore().isAuthenticated;
   const env = import.meta.env.VITE_ENVIRONMENT;
+  const { toggleMenu, toggleDarkMode, isDarkTheme } = useLayout();
+  const adminStore = useAdminStore();
+
+  const isAuthenticated = computed(() => adminStore.isAuthenticated);
 
   const logout = () => {
-    useAdminStore().logout();
+    adminStore.logout();
     window.location.href = '/';
   };
 </script>
