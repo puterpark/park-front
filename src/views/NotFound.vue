@@ -1,4 +1,5 @@
 <script setup>
+  import { onMounted, onUnmounted } from 'vue';
   import { useRoute } from 'vue-router';
 
   const route = useRoute();
@@ -11,6 +12,15 @@
       window.location.href = `${API_URL}${orgUri}`;
     }
   };
+
+  const handleKeyup = (e) => {
+    if (e.key === '\\') {
+      redirectUrl();
+    }
+  };
+
+  onMounted(() => window.addEventListener('keyup', handleKeyup));
+  onUnmounted(() => window.removeEventListener('keyup', handleKeyup));
 </script>
 
 <template>
