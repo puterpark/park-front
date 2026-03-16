@@ -50,7 +50,7 @@
   <div class="flex">
     <div class="card flex w-full flex-col gap-4">
       <div class="text-xl font-semibold">Progress</div>
-      <div class="flex flex-col gap-4 pt-4 md:flex-row">
+      <div class="flex flex-col gap-4 md:flex-row">
         <InputGroup>
           <Tag value="시작일" class="w-16" />
           <DatePicker v-model="startDate" dateFormat="yy-mm-dd" panelClass="custom-datepicker-panel" @valueChange="calcProgress" showIcon :maxDate="endDate" />
