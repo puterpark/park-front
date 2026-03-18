@@ -219,8 +219,8 @@
             <span class="text-muted-color mb-4 block font-medium">Today</span>
             <div class="text-surface-900 dark:text-surface-0 text-xl font-medium">{{ todayRedirectCount }}</div>
           </div>
-          <div class="rounded-border flex h-10 w-10 items-center justify-center bg-orange-100 dark:bg-orange-400/10">
-            <i class="pi pi-chart-line text-xl! text-orange-500"></i>
+          <div class="rounded-border bg-primary-100 dark:bg-primary-400/10 flex h-10 w-10 items-center justify-center">
+            <i class="pi pi-chart-line text-primary-500 text-xl!"></i>
           </div>
         </div>
         <span class="text-muted-color">Redirect Count</span>
@@ -231,8 +231,8 @@
             <span class="text-muted-color mb-4 block font-medium">Today</span>
             <div class="text-surface-900 dark:text-surface-0 text-xl font-medium">{{ todayMostAccessIp }}</div>
           </div>
-          <div class="rounded-border flex h-10 w-10 items-center justify-center bg-orange-100 dark:bg-orange-400/10">
-            <i class="pi pi-crown text-xl! text-orange-500"></i>
+          <div class="rounded-border bg-primary-100 dark:bg-primary-400/10 flex h-10 w-10 items-center justify-center">
+            <i class="pi pi-crown text-primary-500 text-xl!"></i>
           </div>
         </div>
         <span class="text-muted-color">Most Access IP</span>

@@ -59,7 +59,7 @@
       <div class="flex flex-col gap-4 md:flex-row">
         <div class="flex grow basis-0 flex-col gap-4">
           <div>
-            <Tag severity="success" value="길이" />
+            <Tag value="길이" />
           </div>
           <InputNumber
             v-model="pwLength"
@@ -73,7 +73,7 @@
         </div>
         <div class="flex grow basis-0 flex-col gap-4">
           <div>
-            <Tag severity="warn" value="Option" />
+            <Tag severity="success" value="Option" />
           </div>
           <div class="mt-2 flex flex-wrap items-center gap-x-6 gap-y-3">
             <div>
@@ -148,7 +148,7 @@
         </div>
       </div>
       <div class="pt-4">
-        <Tag value="비밀번호" />
+        <Tag severity="warn" value="비밀번호" />
       </div>
       <Textarea :auto-resize="true" rows="3" cols="30" :value="password" @click="handleCopy(password)" readonly />
     </div>
