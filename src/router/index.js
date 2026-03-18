@@ -71,6 +71,11 @@ const appChildren = [
     name: 'holiday',
     component: () => import('@/views/tools/Holiday.vue'),
   },
+  {
+    path: '/tools/calc-date',
+    name: 'CalcDate',
+    component: () => import('@/views/tools/CalcDate.vue'),
+  },
 ];
 
 const toolPaths = appChildren.filter((route) => route.path.startsWith('/tools/')).map((route) => route.path);

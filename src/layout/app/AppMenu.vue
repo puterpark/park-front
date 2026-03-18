@@ -63,7 +63,7 @@
         },
         {
           label: 'Radix',
-          icon: 'pi pi-fw pi-calculator',
+          icon: 'pi pi-fw pi-percentage',
           to: '/tools/radix',
         },
         {
@@ -80,6 +80,11 @@
           label: 'Holiday',
           icon: 'pi pi-fw pi-calendar',
           to: '/tools/holiday',
+        },
+        {
+          label: 'CalcDate',
+          icon: 'pi pi-fw pi-calculator',
+          to: '/tools/calc-date',
         },
       ],
     },
