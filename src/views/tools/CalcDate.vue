@@ -49,7 +49,11 @@
   }));
 
   const setOffset = (days) => {
-    calcDay.value = days;
+    calcDay.value = calcDay.value + days;
+  };
+
+  const resetOffset = () => {
+    calcDay.value = 0;
   };
 </script>
 
@@ -81,7 +85,7 @@
           <Button label="+30일" @click="setOffset(30)" severity="secondary" size="small" outlined />
           <Button label="+100일" @click="setOffset(100)" severity="secondary" size="small" outlined />
           <Button label="+1년" @click="setOffset(365)" severity="secondary" size="small" outlined />
-          <Button label="초기화" @click="setOffset(0)" severity="secondary" size="small" outlined icon="pi pi-refresh" />
+          <Button label="초기화" @click="resetOffset" severity="secondary" size="small" outlined icon="pi pi-refresh" />
         </div>
       </div>
       <div class="pt-4">
