@@ -1,9 +1,7 @@
 <script setup>
   import { computed } from 'vue';
-
   import GlobalBlockUi from '@/components/GlobalBlockUi.vue';
   import { useLayout } from '@/composables/useLayout';
-
   import AppFooter from '../AppFooter.vue';
   import AppTopbar from '../AppTopbar.vue';
   import AppSidebar from './AppSidebar.vue';
@@ -28,7 +26,7 @@
     <div class="layout-main-container">
       <div class="flex items-center justify-center">
         <ins class="kakao_ad_area mb-4" style="display: none" data-ad-unit="DAN-AaSJlRVkpgNkrZjv" data-ad-width="320" data-ad-height="50"></ins>
-        <scriptx src="//t1.daumcdn.net/kas/static/ba.min.js" async />
+        <scriptx src="//t1.kakaocdn.net/kas/static/ba.min.js" async />
       </div>
       <div class="layout-main">
         <router-view />
