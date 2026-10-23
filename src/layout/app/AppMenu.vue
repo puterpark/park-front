@@ -86,6 +86,11 @@
           icon: 'pi pi-fw pi-calculator',
           to: '/tools/calc-date',
         },
+        {
+          label: 'SkillTimer',
+          icon: 'pi pi-fw pi-bell',
+          to: '/tools/skill-timer',
+        },
       ],
     },
   ]);

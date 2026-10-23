@@ -76,6 +76,11 @@ const appChildren = [
     name: 'CalcDate',
     component: () => import('@/views/tools/CalcDate.vue'),
   },
+  {
+    path: '/tools/skill-timer',
+    name: 'skillTimer',
+    component: () => import('@/views/tools/SkillTimer.vue'),
+  },
 ];
 
 const toolPaths = appChildren.filter((route) => route.path.startsWith('/tools/')).map((route) => route.path);

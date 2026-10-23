@@ -18,7 +18,7 @@
     "@schedule-x/vue": "^4.0.0",
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
     "@unhead/vue": "^2.1.2",
-    "axios": "^1.13.2",
+    "axios": "^1.20.0",
     "chart.js": "3.3.2",
     "dayjs": "^1.11.19",
     "decimal.js": "^10.6.0",
@@ -39,13 +39,13 @@
     "@primevue/auto-import-resolver": "^4.3.1",
     "@rushstack/eslint-patch": "^1.8.0",
     "@tailwindcss/vite": "^4.1.17",
-    "@vitejs/plugin-vue": "^5.0.5",
+    "@vitejs/plugin-vue": "^6.0.10",
     "@vue/eslint-config-prettier": "^9.0.0",
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "sass": "^1.55.0",
     "tailwindcss": "^4.1.17",
     "unplugin-vue-components": "^0.27.3",
-    "vite": "^5.3.1"
+    "vite": "^7.3.7"
   }
 }
