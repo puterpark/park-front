@@ -3,6 +3,7 @@
   import { useAppToast } from '@/composables/useAppToast';
   import { useSeo } from '@/composables/useSeo';
   import { DIGIT_STYLES } from '@/constants/skillTimerDigits';
+  import { RUNE_SIZE, createRuneReferenceImage, findRune } from '@/constants/skillTimerRune';
 
   useSeo({
     title: 'Skill Timer',
@@ -11,15 +12,59 @@
 
   const toast = useAppToast();
 
+  // 감시는 화면에 보이지 않는 영상에서 읽는다 (검색 영역 모달을 닫아도 계속 감시하도록)
+  const captureVideo = document.createElement('video');
+  captureVideo.muted = true;
+  captureVideo.playsInline = true;
+
+  // 검색 영역 모달 안의 미리보기 영상
   const videoRef = ref(null);
   const previewWrapRef = ref(null);
+  const showAreaDialog = ref(false);
 
   const stream = ref(null);
   const isSharing = ref(false);
+  const isStarting = ref(false);
   const scale = ref(1);
 
   // 스킬이 표시되는 큰 영역. 비디오 원본 좌표 기준.
   const searchArea = ref(null);
+
+  // 룬 알림: 미니맵 영역(비디오 원본 좌표)과 설정. 스킬 검색 영역과 따로 둔다
+  const runeArea = ref(null);
+  // 알림 방식과 반복 간격을 한 칸에서 고른다 (0 = 한 번만). 스킬 표처럼 알림 칸에 컨트롤 하나만 두려고 합쳤다
+  const RUNE_REPEAT_SECONDS = [5, 10, 15, 20, 30, 45, 60];
+  const runeAlertOptions = [{ value: 0, label: '한 번만' }, ...RUNE_REPEAT_SECONDS.map((sec) => ({ value: sec, label: `${sec}초마다` }))];
+  const nearestRepeatSeconds = (sec) => RUNE_REPEAT_SECONDS.reduce((best, v) => (Math.abs(v - sec) < Math.abs(best - sec) ? v : best));
+  const rune = reactive({
+    enabled: true,
+    mode: 'once', // 'once' = 나타날 때 한 번, 'repeat' = 떠 있는 동안 intervalSec마다
+    intervalSec: 10,
+    soundId: 'power-up', // RUNE_DEFAULT_SOUND_ID (소리 상수보다 먼저 만들어져서 값을 직접 적음)
+  });
+  // 룬 감시 중 상태 (저장하지 않음)
+  const runeRuntimeState = () => ({
+    status: undefined, // 'present' | 'absent'
+    score: 0,
+    x: 0, // 찾은 위치 (비디오 원본 좌표)
+    y: 0,
+    absentStreak: 0,
+    alerted: false, // 이번에 나타난 룬을 이미 알렸는지
+    lastAlertAt: 0,
+    previewSrc: '',
+  });
+  const runeState = reactive(runeRuntimeState());
+  const runeReferenceSrc = createRuneReferenceImage();
+
+  // 검색 영역 모달이 다루는 대상: 'skill' = 스킬 검색 영역, 'rune' = 미니맵 영역
+  const areaTarget = ref('skill');
+  const activeArea = computed({
+    get: () => (areaTarget.value === 'rune' ? runeArea.value : searchArea.value),
+    set: (v) => {
+      if (areaTarget.value === 'rune') runeArea.value = v;
+      else searchArea.value = v;
+    },
+  });
 
   const regions = reactive([]);
   let regionSeq = 1;
@@ -69,10 +114,19 @@
   const ICON_BASE_URL = 'https://cdn.puter.us/images/skill-icon/';
   const SOUND_BASE_URL = 'https://cdn.puter.us/sounds/';
 
-  // 스킬별 알림 소리. DEFAULT_SOUND_ID = 기본 소리, 그 외는 CDN 소리 파일 id
+  // 스킬별 알림 소리. DEFAULT_SOUND_ID = 기본 소리(파일 없이 만드는 삐 소리), 그 외는 CDN 소리 파일 id
   const DEFAULT_SOUND_ID = 'beep';
+  // 처음 등록할 때 쓰는 소리. 목록(sounds.json)에 없으면 기본 소리
+  const SKILL_DEFAULT_SOUND_ID = 'payment-success';
+  const RUNE_DEFAULT_SOUND_ID = 'power-up';
   const sounds = ref([]);
   const soundOptions = computed(() => [{ id: DEFAULT_SOUND_ID, name: '기본 소리' }, ...sounds.value]);
+  const hasSound = (id) => id === DEFAULT_SOUND_ID || sounds.value.some((s) => s.id === id);
+  // 저장된 소리가 없거나 목록에서 빠졌으면 처음 기본값, 그것도 없으면 기본 소리
+  const resolveSoundId = (id, fallback) => {
+    if (hasSound(id)) return id;
+    return hasSound(fallback) ? fallback : DEFAULT_SOUND_ID;
+  };
   // 여러 스킬이 동시에 알려도 서로 끊지 않도록 소리 파일마다 따로 재생
   const audioCache = new Map(); // src -> HTMLAudioElement
   const LEGACY_ICON_PATH = /^\/skill-timer-presets\//;
@@ -81,6 +135,8 @@
     try {
       const payload = {
         searchArea: searchArea.value,
+        runeArea: runeArea.value,
+        rune: { enabled: rune.enabled, mode: rune.mode, intervalSec: rune.intervalSec, soundId: rune.soundId },
         regions: regions.map((r) => ({
           name: r.name,
           tplW: r.tplW,
@@ -169,24 +225,39 @@
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return;
       const payload = JSON.parse(raw);
-      if (!payload?.searchArea || !Array.isArray(payload.regions) || payload.regions.length === 0) return;
+      if (!payload) return;
 
-      searchArea.value = payload.searchArea;
+      // 검색 영역과 스킬은 따로 저장된다 (영역을 다시 지정하는 중이면 영역 없이 스킬만 있을 수 있음)
+      searchArea.value = payload.searchArea ?? null;
+      runeArea.value = payload.runeArea ?? null;
+      if (payload.rune) {
+        rune.enabled = payload.rune.enabled ?? true;
+        rune.mode = payload.rune.mode === 'repeat' ? 'repeat' : 'once';
+        rune.intervalSec = nearestRepeatSeconds(payload.rune.intervalSec ?? 10);
+        rune.soundId = resolveSoundId(payload.rune.soundId, RUNE_DEFAULT_SOUND_ID);
+      }
+      if (!Array.isArray(payload.regions) || payload.regions.length === 0) return;
 
       for (const saved of payload.regions) {
         // 예전에 로컬(public)에 있던 스킬 경로로 저장된 설정은 CDN 주소로 바꿔서 불러온다
         const iconSrc = saved.refPreviewSrc.replace(LEGACY_ICON_PATH, ICON_BASE_URL);
-        const { template, w, h } = await loadImageTemplate(iconSrc);
+        // 이미지를 못 불러와도(CDN 오류 등) 목록에서 빼면 다음 저장 때 설정이 지워지므로, 실패로 표시만 하고 남겨둔다
+        let loaded = null;
+        try {
+          loaded = await loadImageTemplate(iconSrc);
+        } catch {
+          // 아래에서 loadFailed로 표시
+        }
         const id = regionSeq++;
-        templateStore.set(id, template);
+        if (loaded) templateStore.set(id, loaded.template);
         // 숫자 종류가 저장되기 전의 설정은 기본 스킬 목록에서 같은 이미지를 찾아 채운다
         const preset = presets.value.find((p) => iconSrc.endsWith(`/${p.file}`));
         regions.push({
           ...counterState(),
           id,
           name: saved.name,
-          tplW: saved.tplW ?? w,
-          tplH: saved.tplH ?? h,
+          tplW: saved.tplW ?? loaded?.w,
+          tplH: saved.tplH ?? loaded?.h,
           lastX: saved.lastX,
           lastY: saved.lastY,
           matchScore: 0,
@@ -195,17 +266,21 @@
           alertBeforeSec: saved.alertBeforeSec ?? 0,
           alertAtCount: saved.alertAtCount ?? 0,
           // 목록에서 빠진 소리는 기본 소리로
-          soundId: sounds.value.some((s) => s.id === saved.soundId) ? saved.soundId : DEFAULT_SOUND_ID,
+          soundId: resolveSoundId(saved.soundId, SKILL_DEFAULT_SOUND_ID),
           status: undefined,
           absentStreak: 0,
           paused: saved.paused ?? false,
           previewSrc: '',
           refPreviewSrc: iconSrc,
+          loadFailed: !loaded,
         });
       }
 
       persist();
-      toast.info('저장된 설정을 불러왔어요', `스킬 ${regions.length}개를 복원했어요. 화면 공유를 시작하면 바로 감시해요.`);
+      const next = searchArea.value ? '화면 공유를 시작하면 바로 감시해요.' : '화면 공유 후 검색 영역을 지정하면 감시를 시작해요.';
+      toast.info('저장된 설정을 불러왔어요', `스킬 ${regions.length}개를 복원했어요. ${next}`);
+      const failed = regions.filter((r) => r.loadFailed).length;
+      if (failed) toast.warn('스킬 이미지를 불러오지 못했어요', `${failed}개는 감시하지 않아요. 설정은 남겨뒀으니 새로고침하면 다시 시도해요.`);
     } catch {
       // 복원 실패는 무시
     }
@@ -483,24 +558,67 @@
     else region.status = 'hidden';
   };
 
+  // 마지막으로 찾은 위치에서 이만큼(px, 비디오 원본 기준)보다 많이 떨어진 곳에 보이면 다른 룬으로 본다
+  const RUNE_MOVE_PX = 3;
+
+  // 룬은 캐릭터 표시가 잠깐 겹쳐도 사라진 것으로 보지 않도록, 스킬과 같이 연속으로 안 보여야 사라진 것으로 본다
+  const checkRune = (rgba, ra) => {
+    const now = Date.now();
+    const found = findRune(rgba, ra.w, ra.h);
+    runeState.score = found.score;
+    if (found.found) {
+      const x = found.x + ra.x;
+      const y = found.y + ra.y;
+      // 맵을 옮기면 로딩이 짧아 "사라짐"(연속 GONE_TICKS번)까지 안 가므로, 다른 위치에 보이면 새 룬으로 보고 다시 알린다
+      if (runeState.alerted && (Math.abs(x - runeState.x) > RUNE_MOVE_PX || Math.abs(y - runeState.y) > RUNE_MOVE_PX)) runeState.alerted = false;
+      runeState.status = 'present';
+      runeState.absentStreak = 0;
+      runeState.x = x;
+      runeState.y = y;
+      runeState.previewSrc = cropToDataUrl(captureCanvas, runeState.x, runeState.y, RUNE_SIZE, RUNE_SIZE);
+      const repeatDue = rune.mode === 'repeat' && now - runeState.lastAlertAt >= rune.intervalSec * 1000;
+      if (!runeState.alerted || repeatDue) {
+        runeState.alerted = true;
+        runeState.lastAlertAt = now;
+        playAlertSound(rune.soundId);
+      }
+      return;
+    }
+    runeState.absentStreak++;
+    if (runeState.absentStreak >= GONE_TICKS) {
+      // 사라지면 알림 없이 다음에 나타날 룬을 기다린다
+      runeState.status = 'absent';
+      runeState.alerted = false;
+      runeState.previewSrc = '';
+    }
+  };
+
   const tick = async () => {
-    if (ticking || !isSharing.value || !videoRef.value || !searchArea.value || regions.length === 0) return;
+    const watchSkills = !!searchArea.value && regions.length > 0;
+    const watchRune = !!runeArea.value && rune.enabled;
+    if (ticking || !isSharing.value || (!watchSkills && !watchRune)) return;
     ticking = true;
     try {
-      const video = videoRef.value;
+      const video = captureVideo;
       if (!video.videoWidth) return;
       nowTick.value = Date.now();
       captureCanvas.width = video.videoWidth;
       captureCanvas.height = video.videoHeight;
       captureCtx.drawImage(video, 0, 0);
 
-      const sa = searchArea.value;
-      const rgba = captureCtx.getImageData(sa.x, sa.y, sa.w, sa.h).data;
+      if (watchSkills) {
+        const sa = searchArea.value;
+        const rgba = captureCtx.getImageData(sa.x, sa.y, sa.w, sa.h).data;
+        for (const region of regions) {
+          if (region.paused) continue;
+          matchRegion(region, rgba, sa);
+          checkTimedAlert(region);
+        }
+      }
 
-      for (const region of regions) {
-        if (region.paused) continue;
-        matchRegion(region, rgba, sa);
-        checkTimedAlert(region);
+      if (watchRune) {
+        const ra = runeArea.value;
+        checkRune(captureCtx.getImageData(ra.x, ra.y, ra.w, ra.h).data, ra);
       }
     } finally {
       ticking = false;
@@ -508,36 +626,45 @@
   };
 
   const startShare = async () => {
+    // 공유할 창을 고르는 동안 버튼을 또 누르면 공유와 감시가 두 개씩 생긴다
+    if (isStarting.value || isSharing.value) return;
     if (typeof navigator.mediaDevices?.getDisplayMedia !== 'function') {
       toast.error('지원하지 않는 브라우저', '화면 공유를 지원하지 않는 브라우저예요.');
       return;
     }
 
     ensureAudio();
+    isStarting.value = true;
 
+    let s;
     try {
       // 공유 선택창이 '창' 탭으로 열리도록 힌트 (게임 창을 바로 고를 수 있게)
-      const s = await navigator.mediaDevices.getDisplayMedia({ video: { displaySurface: 'window' }, audio: false });
+      s = await navigator.mediaDevices.getDisplayMedia({ video: { displaySurface: 'window' }, audio: false });
+    } catch {
+      toast.error('화면 공유 실패', '화면 공유 권한을 허용해야 사용할 수 있어요.');
+      isStarting.value = false;
+      return;
+    }
+
+    try {
       stream.value = s;
       isSharing.value = true;
 
-      await nextTick();
-      if (!videoRef.value) return;
-
-      videoRef.value.srcObject = s;
-      videoRef.value.onloadedmetadata = updateScale;
-      await videoRef.value.play();
-      updateScale();
-
-      resizeObserver = new ResizeObserver(updateScale);
-      resizeObserver.observe(videoRef.value);
+      captureVideo.srcObject = s;
+      await captureVideo.play();
 
       s.getVideoTracks()[0].addEventListener('ended', stopShare);
 
       pollTimer = setInterval(tick, 1200);
+
+      // 처음이라 검색 영역이 없으면 바로 지정하도록 연다
+      if (!searchArea.value && !runeArea.value) openAreaDialog('skill');
     } catch {
-      toast.error('화면 공유 실패', '화면 공유 권한을 허용해야 사용할 수 있어요.');
-      isSharing.value = false;
+      // 권한은 받았지만 영상 재생 등에서 실패: 잡아둔 화면 공유를 놓아준다
+      stopShare();
+      toast.error('화면 공유 실패', '화면 공유를 시작하지 못했어요. 다시 시도해주세요.');
+    } finally {
+      isStarting.value = false;
     }
   };
 
@@ -546,16 +673,20 @@
       clearInterval(pollTimer);
       pollTimer = null;
     }
-    if (resizeObserver) {
-      resizeObserver.disconnect();
-      resizeObserver = null;
-    }
     if (stream.value) {
       stream.value.getTracks().forEach((t) => t.stop());
       stream.value = null;
     }
+    captureVideo.srcObject = null;
+    showAreaDialog.value = false;
     isSharing.value = false;
-    // 감시가 끝났으니 화면 공유 중에만 의미 있는 값(현재 모습, 상태, 일치도, 남은 시간/횟수)은 처음 상태로 되돌린다
+    // 감시가 끝났으니 화면 공유 중에만 의미 있는 값은 처음 상태로 되돌린다
+    resetRegionRuntime();
+    Object.assign(runeState, runeRuntimeState());
+  };
+
+  // 화면을 보고 얻은 값(현재 모습, 상태, 일치도, 남은 시간/횟수)만 처음 상태로 되돌린다. 저장되는 설정은 그대로
+  const resetRegionRuntime = () => {
     regions.forEach((r) => {
       Object.assign(r, counterState(), { previewSrc: '', status: undefined, matchScore: 0, absentStreak: 0 });
     });
@@ -567,7 +698,7 @@
   };
 
   const onSelectStart = (e) => {
-    if (!isSharing.value || searchArea.value) return;
+    if (!isSharing.value || activeArea.value) return;
     dragging.value = true;
     dragOrigin.value = getRelPoint(e);
     selectRect.value = { x: dragOrigin.value.x, y: dragOrigin.value.y, w: 0, h: 0 };
@@ -592,7 +723,7 @@
       counterType: counterType ?? null,
       alertBeforeSec: 0,
       alertAtCount: 0,
-      soundId: DEFAULT_SOUND_ID,
+      soundId: resolveSoundId(SKILL_DEFAULT_SOUND_ID, SKILL_DEFAULT_SOUND_ID),
       id,
       name: name || `스킬 ${regions.length + 1}`,
       tplW,
@@ -649,14 +780,16 @@
     selectRect.value = null;
     if (!rect || rect.w < 8 || rect.h < 8 || !scale.value) return;
 
-    searchArea.value = {
+    activeArea.value = {
       x: Math.round(rect.x / scale.value),
       y: Math.round(rect.y / scale.value),
       w: Math.round(rect.w / scale.value),
       h: Math.round(rect.h / scale.value),
     };
     persist();
-    toast.success('검색 영역 지정 완료', '이제 "스킬 선택"으로 감시할 스킬을 등록하세요.');
+    if (areaTarget.value === 'rune') toast.success('미니맵 영역 지정 완료', '이 영역에서 룬을 찾아요.');
+    else if (regions.length) toast.success('검색 영역 지정 완료', `등록된 스킬 ${regions.length}개를 이 영역에서 찾아요.`);
+    else toast.success('검색 영역 지정 완료', '이제 "스킬 선택"으로 감시할 스킬을 등록하세요.');
   };
 
   const onSelectCancel = () => {
@@ -664,12 +797,150 @@
     selectRect.value = null;
   };
 
-  const resetSearchArea = () => {
-    searchArea.value = null;
-    regions.splice(0, regions.length);
-    templateStore.clear();
+  // 지정한 검색 영역을 끌어서 옮기거나(move) 모서리·변을 끌어 크기를 바꾼다(n/s/e/w 조합). 좌표는 비디오 원본 기준
+  const AREA_MIN_SIZE = 32; // 스킬 아이콘(32px)보다 작으면 찾을 수 없다
+  const AREA_HANDLES = [
+    { mode: 'nw', class: '-left-1.5 -top-1.5 cursor-nwse-resize' },
+    { mode: 'n', class: 'left-1/2 -top-1.5 -translate-x-1/2 cursor-ns-resize' },
+    { mode: 'ne', class: '-right-1.5 -top-1.5 cursor-nesw-resize' },
+    { mode: 'e', class: '-right-1.5 top-1/2 -translate-y-1/2 cursor-ew-resize' },
+    { mode: 'se', class: '-right-1.5 -bottom-1.5 cursor-nwse-resize' },
+    { mode: 's', class: 'left-1/2 -bottom-1.5 -translate-x-1/2 cursor-ns-resize' },
+    { mode: 'sw', class: '-left-1.5 -bottom-1.5 cursor-nesw-resize' },
+    { mode: 'w', class: '-left-1.5 top-1/2 -translate-y-1/2 cursor-ew-resize' },
+  ];
+  let areaEdit = null; // { mode, startX, startY, orig }
+
+  const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
+
+  const onAreaEditMove = (e) => {
+    if (!areaEdit || !scale.value) return;
+    const { mode, startX, startY, orig } = areaEdit;
+    const dx = (e.clientX - startX) / scale.value;
+    const dy = (e.clientY - startY) / scale.value;
+    const vw = captureVideo.videoWidth;
+    const vh = captureVideo.videoHeight;
+
+    if (mode === 'move') {
+      activeArea.value = {
+        ...orig,
+        x: Math.round(clamp(orig.x + dx, 0, vw - orig.w)),
+        y: Math.round(clamp(orig.y + dy, 0, vh - orig.h)),
+      };
+      return;
+    }
+
+    let x1 = orig.x;
+    let y1 = orig.y;
+    let x2 = orig.x + orig.w;
+    let y2 = orig.y + orig.h;
+    if (mode.includes('w')) x1 = clamp(x1 + dx, 0, x2 - AREA_MIN_SIZE);
+    if (mode.includes('e')) x2 = clamp(x2 + dx, x1 + AREA_MIN_SIZE, vw);
+    if (mode.includes('n')) y1 = clamp(y1 + dy, 0, y2 - AREA_MIN_SIZE);
+    if (mode.includes('s')) y2 = clamp(y2 + dy, y1 + AREA_MIN_SIZE, vh);
+    activeArea.value = { x: Math.round(x1), y: Math.round(y1), w: Math.round(x2 - x1), h: Math.round(y2 - y1) };
+  };
+
+  const onAreaEditEnd = () => {
+    window.removeEventListener('pointermove', onAreaEditMove);
+    window.removeEventListener('pointerup', onAreaEditEnd);
+    if (!areaEdit) return;
+    areaEdit = null;
     persist();
   };
+
+  const onAreaEditStart = (e, mode) => {
+    if (!activeArea.value) return;
+    e.preventDefault();
+    areaEdit = { mode, startX: e.clientX, startY: e.clientY, orig: { ...activeArea.value } };
+    // 영역 밖으로 빠르게 끌어도 놓치지 않도록 창 전체에서 받는다
+    window.addEventListener('pointermove', onAreaEditMove);
+    window.addEventListener('pointerup', onAreaEditEnd);
+  };
+
+  // 모달이 열리면 미리보기 영상에 같은 화면 공유를 연결하고, 닫히면 끊는다
+  const onAreaDialogShow = async () => {
+    await nextTick();
+    const video = videoRef.value;
+    if (!video || !stream.value) return;
+    video.srcObject = stream.value;
+    video.onloadedmetadata = updateScale;
+    await video.play().catch(() => {});
+    updateScale();
+    resizeObserver = new ResizeObserver(updateScale);
+    resizeObserver.observe(video);
+  };
+
+  const onAreaDialogHide = () => {
+    resizeObserver?.disconnect();
+    resizeObserver = null;
+    if (videoRef.value) videoRef.value.srcObject = null;
+    onSelectCancel();
+    onAreaEditEnd();
+  };
+
+  // 검색 영역만 다시 지정한다. 스킬은 매번 영역 전체에서 다시 찾으므로 등록된 스킬과 설정은 그대로 둔다
+  const resetSearchArea = () => {
+    searchArea.value = null;
+    resetRegionRuntime();
+    persist();
+  };
+
+  // 모달의 "다시 그리기": 지금 다루는 영역만 비운다
+  const clearActiveArea = () => {
+    if (areaTarget.value === 'rune') {
+      runeArea.value = null;
+      Object.assign(runeState, runeRuntimeState());
+      persist();
+    } else {
+      resetSearchArea();
+    }
+  };
+
+  const openAreaDialog = (target) => {
+    areaTarget.value = target;
+    showAreaDialog.value = true;
+  };
+
+  const onRuneEnabledChange = (enabled) => {
+    rune.enabled = enabled;
+    // 다시 켜면 지금 떠 있는 룬도 바로 알리도록 처음 상태에서 시작
+    Object.assign(runeState, runeRuntimeState());
+    persist();
+  };
+
+  const runeAlertValue = computed({
+    get: () => (rune.mode === 'repeat' ? rune.intervalSec : 0),
+    set: (v) => {
+      if (v > 0) {
+        rune.mode = 'repeat';
+        rune.intervalSec = v;
+      } else {
+        rune.mode = 'once';
+      }
+      persist();
+    },
+  });
+
+  const onRuneSoundChange = () => {
+    persist();
+    playAlertSound(rune.soundId);
+  };
+
+  // 스킬 표와 같은 말과 색으로 상태를 보여준다
+  const runeStatusLabel = computed(() => {
+    if (!rune.enabled) return '중지';
+    if (runeState.status === 'present') return runeState.absentStreak > 0 ? `찾는 중 ${runeState.absentStreak}/${GONE_TICKS}` : '인식 중';
+    return '대기 중';
+  });
+
+  const runeStatusSeverity = computed(() => {
+    if (!rune.enabled) return 'secondary';
+    if (runeState.status === 'present') return runeState.absentStreak > 0 ? 'warn' : 'success';
+    return 'secondary';
+  });
+
+  const runeHint = computed(() => (rune.mode === 'repeat' ? `떠 있는 동안 ${runeAlertOptions.find((o) => o.value === rune.intervalSec)?.label ?? ''}` : '나타날 때 한 번'));
 
   const removeRegion = (id) => {
     const idx = regions.findIndex((r) => r.id === id);
@@ -709,8 +980,8 @@
   };
 
   const searchAreaBoxStyle = computed(() => {
-    if (!searchArea.value) return {};
-    const sa = searchArea.value;
+    if (!activeArea.value) return {};
+    const sa = activeArea.value;
     return {
       left: `${sa.x * scale.value}px`,
       top: `${sa.y * scale.value}px`,
@@ -718,6 +989,13 @@
       height: `${sa.h * scale.value}px`,
     };
   });
+
+  const runeBoxStyle = computed(() => ({
+    left: `${runeState.x * scale.value}px`,
+    top: `${runeState.y * scale.value}px`,
+    width: `${RUNE_SIZE * scale.value}px`,
+    height: `${RUNE_SIZE * scale.value}px`,
+  }));
 
   const regionBoxStyle = (r) => ({
     left: `${r.lastX * scale.value}px`,
@@ -741,6 +1019,7 @@
   };
 
   const statusLabel = (r) => {
+    if (r.loadFailed) return '이미지 불러오기 실패';
     if (r.paused) return '중지';
     const remain = remainingLabel(r);
     if (r.status === 'present') return remain ? `인식 중 · ${remain}` : '인식 중';
@@ -755,14 +1034,16 @@
   const loadSounds = async () => {
     try {
       const res = await fetch('/skill-timer-presets/sounds.json');
-      if (!res.ok) return;
-      sounds.value = await res.json();
+      if (res.ok) sounds.value = await res.json();
     } catch {
       // 소리 목록이 없으면 기본 소리만 사용
     }
+    // 룬 알림은 저장된 설정이 없을 때도 처음 기본 소리가 목록에 있는지 맞춰둔다
+    rune.soundId = resolveSoundId(rune.soundId, RUNE_DEFAULT_SOUND_ID);
   };
 
   const statusSeverity = (r) => {
+    if (r.loadFailed) return 'danger';
     if (r.paused) return 'secondary';
     if (r.status === 'present') return 'success';
     if (r.status === 'hidden') return 'warn';
@@ -778,6 +1059,7 @@
 
   onBeforeUnmount(() => {
     stopShare();
+    onAreaEditEnd();
     templateStore.clear();
     audioCtx?.close();
     audioCache.forEach((audio) => audio.pause());
@@ -790,40 +1072,26 @@
     <div class="card flex w-full flex-col gap-4">
       <div class="text-xl font-semibold">SkillTimer</div>
       <div class="flex flex-wrap items-center gap-2">
-        <Button v-if="!isSharing" label="화면 공유 시작" icon="pi pi-desktop" @click="startShare" />
+        <Button v-if="!isSharing" label="화면 공유 시작" icon="pi pi-desktop" :loading="isStarting" @click="startShare" />
         <Button v-else label="화면 공유 중지" icon="pi pi-times" severity="danger" @click="stopShare" />
-        <Button v-if="searchArea" label="스킬 선택" icon="pi pi-images" severity="secondary" outlined @click="openPresetPicker" />
-        <Button v-if="searchArea" label="초기화" icon="pi pi-refresh" severity="danger" outlined @click="resetSearchArea" />
       </div>
     </div>
   </div>
 
-  <div class="mt-8 flex" v-if="isSharing">
+  <!-- 스킬을 등록하려면 화면 공유 중이어야 하므로, 등록된 스킬이 없어도 공유 중이면 보여준다 -->
+  <div class="mt-8 flex" v-if="regions.length || isSharing">
     <div class="card flex w-full flex-col gap-4">
-      <div
-        ref="previewWrapRef"
-        class="relative inline-block max-w-full select-none"
-        :class="{ 'cursor-crosshair': !searchArea }"
-        @mousedown="onSelectStart"
-        @mousemove="onSelectMove"
-        @mouseup="onSelectEnd"
-        @mouseleave="onSelectCancel"
-      >
-        <video ref="videoRef" class="border-surface-300 block max-w-full rounded border" muted playsinline></video>
-        <div v-if="searchArea" class="border-primary pointer-events-none absolute border-2 border-dashed" :style="searchAreaBoxStyle"></div>
-        <template v-for="r in regions" :key="`box-${r.id}`">
-          <div v-if="r.status === 'present'" class="pointer-events-none absolute border-2 border-green-500" :style="regionBoxStyle(r)"></div>
-          <div v-else-if="r.status === 'hidden'" class="pointer-events-none absolute border-2 border-dashed border-amber-500" :style="regionBoxStyle(r)"></div>
-        </template>
-        <div v-if="selectRect" class="border-primary bg-primary/20 pointer-events-none absolute border-2 border-dashed" :style="selectRectStyle"></div>
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="text-xl font-semibold">스킬 알림</div>
+        <div class="flex flex-wrap items-center gap-2">
+          <Button v-if="isSharing && searchArea" label="스킬 선택" icon="pi pi-images" severity="secondary" outlined :class="{ 'breathe-hint': !regions.length }" @click="openPresetPicker" />
+          <Button v-if="isSharing" label="검색 영역 설정" icon="pi pi-expand" severity="secondary" outlined @click="openAreaDialog('skill')" />
+        </div>
       </div>
-    </div>
-  </div>
-
-  <div class="mt-8 flex" v-if="regions.length">
-    <div class="card flex w-full flex-col gap-4">
-      <div class="text-xl font-semibold">감시 중인 스킬</div>
-      <div class="flex flex-col">
+      <div v-if="!regions.length" class="text-muted-color text-sm">
+        {{ searchArea ? '"스킬 선택"으로 감시할 스킬을 등록하세요.' : '"검색 영역 설정"에서 스킬이 표시되는 곳을 먼저 지정하세요.' }}
+      </div>
+      <div v-else class="flex flex-col">
         <!-- 모든 줄이 같은 열 너비를 쓰도록 제목줄과 각 줄에 같은 grid 템플릿을 사용 (모바일은 줄바꿈 배치) -->
         <div class="skill-row text-muted-color border-surface-200 hidden border-b pb-2 text-xs font-medium">
           <span>감시</span>
@@ -919,6 +1187,134 @@
     </div>
   </div>
 
+  <!-- 미니맵 영역을 지정하려면 화면 공유 중이어야 하므로, 영역이 없어도 공유 중이면 보여준다 -->
+  <div class="mt-8 flex" v-if="runeArea || isSharing">
+    <div class="card flex w-full flex-col gap-4">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="text-xl font-semibold">룬 알림</div>
+        <Button v-if="isSharing" label="미니맵 영역 설정" icon="pi pi-map" severity="secondary" outlined @click="openAreaDialog('rune')" />
+      </div>
+      <div v-if="!runeArea" class="text-muted-color text-sm">"미니맵 영역 설정"에서 미니맵이 보이는 곳을 지정하세요.</div>
+      <div v-else class="flex flex-col">
+        <!-- 스킬 알림 표와 같은 grid 템플릿(skill-row)을 써서 두 표의 열을 맞춘다 -->
+        <div class="skill-row text-muted-color border-surface-200 hidden border-b pb-2 text-xs font-medium">
+          <span>감시</span>
+          <span>기준 / 현재</span>
+          <span>이름</span>
+          <span>상태</span>
+          <span>알림</span>
+          <span></span>
+        </div>
+        <div class="skill-row flex flex-wrap items-center gap-3 py-3">
+          <label class="flex cursor-pointer items-center gap-2">
+            <ToggleSwitch :modelValue="rune.enabled" aria-label="룬 알림" @update:modelValue="onRuneEnabledChange" />
+            <span class="text-xs font-medium" :class="rune.enabled ? 'text-color' : 'text-muted-color'">{{ rune.enabled ? '켜짐' : '꺼짐' }}</span>
+          </label>
+          <div class="flex items-center gap-1.5">
+            <img :src="runeReferenceSrc" alt="기준 룬" title="기준" class="border-surface-300 h-10 w-10 rounded border bg-black [image-rendering:pixelated]" />
+            <i class="pi pi-angle-right text-muted-color text-xs"></i>
+            <img v-if="runeState.previewSrc" :src="runeState.previewSrc" alt="현재 룬" title="현재" class="border-surface-300 h-10 w-10 rounded border bg-black [image-rendering:pixelated]" />
+            <div v-else class="border-surface-300 text-muted-color flex h-10 w-10 items-center justify-center rounded border border-dashed text-xs" title="룬을 찾으면 표시돼요">-</div>
+          </div>
+
+          <span class="skill-name w-40 text-sm font-medium">룬</span>
+
+          <div class="flex flex-col items-start gap-1">
+            <Tag :value="runeStatusLabel" :severity="runeStatusSeverity" />
+            <span class="text-muted-color text-xs">일치 {{ Math.round(runeState.score * 100) }}%</span>
+          </div>
+
+          <div class="flex flex-col items-start gap-1">
+            <div class="flex items-center gap-2">
+              <span class="text-muted-color skill-mlabel text-xs">알림</span>
+              <Select v-model="runeAlertValue" :options="runeAlertOptions" option-label="label" option-value="value" size="small" class="w-32" aria-label="룬 알림 방식" />
+            </div>
+            <span class="text-muted-color text-xs">{{ runeHint }} 알림</span>
+          </div>
+
+          <div class="skill-actions ml-auto flex items-center justify-end gap-1">
+            <Button
+              icon="pi pi-sliders-h"
+              :severity="openDetails.has('rune') ? 'primary' : 'secondary'"
+              text
+              rounded
+              v-tooltip.top="'상세 설정'"
+              aria-label="상세 설정"
+              :aria-expanded="openDetails.has('rune')"
+              @click="toggleDetail('rune')"
+            />
+          </div>
+
+          <div v-if="openDetails.has('rune')" class="skill-detail bg-surface-50 dark:bg-surface-800 flex w-full flex-wrap items-start gap-x-10 gap-y-4 rounded-lg px-4 py-3">
+            <div class="flex flex-col gap-1.5">
+              <span class="text-muted-color text-xs font-medium">소리</span>
+              <div class="flex items-center gap-1">
+                <Select v-model="rune.soundId" :options="soundOptions" option-label="name" option-value="id" size="small" class="w-44" aria-label="룬 알림 소리" @change="onRuneSoundChange" />
+                <Button v-tooltip.top="'소리 미리 듣기'" icon="pi pi-volume-up" severity="secondary" text rounded size="small" aria-label="소리 미리 듣기" @click="playAlertSound(rune.soundId)" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <Dialog
+    v-model:visible="showAreaDialog"
+    :header="areaTarget === 'rune' ? '미니맵 영역 설정' : '스킬 검색 영역 설정'"
+    modal
+    :draggable="false"
+    :style="{ width: '75rem' }"
+    :breakpoints="{ '1280px': '95vw' }"
+    @show="onAreaDialogShow"
+    @hide="onAreaDialogHide"
+  >
+    <div class="flex flex-col gap-3">
+      <div class="text-muted-color text-sm">
+        <template v-if="activeArea">영역을 끌어서 옮기거나, 모서리·변의 점을 끌어 크기를 바꿀 수 있어요.</template>
+        <template v-else-if="areaTarget === 'rune'">미니맵이 보이는 곳을 드래그해서 영역을 지정하세요. 미니맵 전체가 들어가도록 넉넉하게 잡아주세요.</template>
+        <template v-else>스킬이 표시되는 곳을 드래그해서 검색 영역을 지정하세요.</template>
+      </div>
+      <div
+        ref="previewWrapRef"
+        class="relative inline-block max-w-full select-none"
+        :class="{ 'cursor-crosshair': !activeArea }"
+        @mousedown="onSelectStart"
+        @mousemove="onSelectMove"
+        @mouseup="onSelectEnd"
+        @mouseleave="onSelectCancel"
+      >
+        <video ref="videoRef" class="border-surface-300 block max-h-[70vh] max-w-full rounded border" muted playsinline></video>
+        <div
+          v-if="activeArea"
+          class="border-primary absolute cursor-move touch-none border-2 border-dashed"
+          :style="searchAreaBoxStyle"
+          title="끌어서 옮기기"
+          @pointerdown.stop="onAreaEditStart($event, 'move')"
+          @mousedown.stop
+        >
+          <span
+            v-for="h in AREA_HANDLES"
+            :key="h.mode"
+            class="border-primary bg-surface-0 absolute h-3 w-3 rounded-sm border-2"
+            :class="h.class"
+            @pointerdown.stop="onAreaEditStart($event, h.mode)"
+          ></span>
+        </div>
+        <template v-for="r in areaTarget === 'skill' ? regions : []" :key="`box-${r.id}`">
+          <div v-if="r.status === 'present'" class="pointer-events-none absolute border-2 border-green-500" :style="regionBoxStyle(r)"></div>
+          <div v-else-if="r.status === 'hidden'" class="pointer-events-none absolute border-2 border-dashed border-amber-500" :style="regionBoxStyle(r)"></div>
+        </template>
+        <div v-if="areaTarget === 'rune' && runeState.status === 'present'" class="pointer-events-none absolute border-2 border-green-500" :style="runeBoxStyle"></div>
+        <div v-if="selectRect" class="border-primary bg-primary/20 pointer-events-none absolute border-2 border-dashed" :style="selectRectStyle"></div>
+      </div>
+    </div>
+    <template #footer>
+      <Button v-if="activeArea" label="다시 그리기" icon="pi pi-refresh" severity="secondary" outlined @click="clearActiveArea" />
+      <Button label="완료" icon="pi pi-check" @click="showAreaDialog = false" />
+    </template>
+  </Dialog>
+
   <Dialog v-model:visible="showPresetDialog" header="스킬 선택" modal :style="{ width: '44rem' }" :breakpoints="{ '768px': '95vw' }">
     <div v-if="!presets.length" class="text-muted-color text-sm">아직 등록된 스킬이 없어요.</div>
     <div v-else class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
@@ -966,6 +1362,32 @@
     .skill-detail {
       grid-column: 1 / -1;
       margin-top: 0.75rem;
+    }
+  }
+
+  /* 영역만 지정하고 스킬이 없을 때 다음에 누를 "스킬 선택" 버튼을 숨 쉬듯 강조 */
+  .breathe-hint {
+    --breathe-color: var(--primary-color);
+    --breathe-base-border: var(--surface-border);
+    animation: breathe 2s ease-in-out infinite;
+  }
+
+  @keyframes breathe {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--breathe-color) 0%, transparent);
+      border-color: var(--breathe-base-border);
+    }
+    50% {
+      box-shadow: 0 0 0 6px color-mix(in srgb, var(--breathe-color) 30%, transparent);
+      border-color: var(--breathe-color);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .breathe-hint {
+      animation: none;
+      border-color: var(--breathe-color);
     }
   }
 </style>
