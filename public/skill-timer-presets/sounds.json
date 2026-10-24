@@ -1,0 +1,22 @@
+[
+  {
+    "id": "payment-success",
+    "name": "Payment Success",
+    "file": "payment-success.m4a"
+  },
+  {
+    "id": "power-up",
+    "name": "Power Up",
+    "file": "power-up.wav"
+  },
+  {
+    "id": "coin",
+    "name": "coin",
+    "file": "coin.m4a"
+  },
+  {
+    "id": "netflix",
+    "name": "Netflix",
+    "file": "netflix.mp3"
+  }
+]

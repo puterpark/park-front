@@ -67,6 +67,14 @@
 
   const STORAGE_KEY = 'skill-timer-config-v1';
   const ICON_BASE_URL = 'https://cdn.puter.us/images/skill-icon/';
+  const SOUND_BASE_URL = 'https://cdn.puter.us/sounds/';
+
+  // 스킬별 알림 소리. DEFAULT_SOUND_ID = 기본 소리, 그 외는 CDN 소리 파일 id
+  const DEFAULT_SOUND_ID = 'beep';
+  const sounds = ref([]);
+  const soundOptions = computed(() => [{ id: DEFAULT_SOUND_ID, name: '기본 소리' }, ...sounds.value]);
+  // 여러 스킬이 동시에 알려도 서로 끊지 않도록 소리 파일마다 따로 재생
+  const audioCache = new Map(); // src -> HTMLAudioElement
   const LEGACY_ICON_PATH = /^\/skill-timer-presets\//;
 
   const persist = () => {
@@ -84,6 +92,7 @@
           counterType: r.counterType,
           alertBeforeSec: r.alertBeforeSec,
           alertAtCount: r.alertAtCount,
+          soundId: r.soundId,
           refPreviewSrc: r.refPreviewSrc,
         })),
       };
@@ -185,6 +194,8 @@
           counterType: saved.counterType ?? preset?.counter ?? null,
           alertBeforeSec: saved.alertBeforeSec ?? 0,
           alertAtCount: saved.alertAtCount ?? 0,
+          // 목록에서 빠진 소리는 기본 소리로
+          soundId: sounds.value.some((s) => s.id === saved.soundId) ? saved.soundId : DEFAULT_SOUND_ID,
           status: undefined,
           absentStreak: 0,
           paused: saved.paused ?? false,
@@ -227,36 +238,39 @@
     }
   };
 
-  const notify = (title, message) => {
-    beep();
-    toast.warn(title, message, 10000);
+  // 선택한 소리 파일을 재생한다. 파일이 없거나 재생에 실패하면 기본 소리
+  const playAlertSound = (soundId) => {
+    const sound = sounds.value.find((s) => s.id === soundId);
+    if (!sound) {
+      beep();
+      return;
+    }
+    const src = `${SOUND_BASE_URL}${sound.file}`;
+    let audio = audioCache.get(src);
+    if (!audio) {
+      audio = new Audio(src);
+      audioCache.set(src, audio);
+    }
+    audio.currentTime = 0;
+    audio.play().catch(() => beep());
   };
 
-  const testAlert = () => notify('스킬 알림', '"테스트 스킬" 알림 테스트예요!');
+  const onSoundChange = (region) => {
+    persist();
+    playAlertSound(region.soundId);
+  };
 
-  // 한 번 시전에 한 번만 알린다. reason: 'time'(설정한 시각) | 'count'(설정한 횟수) | 'usedUp' | 'gone'
-  const alertRegion = (region, reason) => {
+  // 한 번 시전에 한 번만 알린다 (소리만)
+  const alertRegion = (region) => {
     if (region.alerted) return;
     region.alerted = true;
     region.alertAt = null;
-    const name = `"${region.name}"`;
-    if (reason === 'time') {
-      const sec = region.alertBeforeSec;
-      if (sec > 0) notify('스킬 알림', `${name} ${sec}초 후에 끝나요!`);
-      else if (sec < 0) notify('스킬 알림', `${name} 끝난 지 ${-sec}초 지났어요!`);
-      else notify('스킬 종료', `${name} 끝났어요!`);
-    } else if (reason === 'count') {
-      notify('스킬 알림', `${name} ${region.count}회 남았어요!`);
-    } else if (reason === 'usedUp') {
-      notify('횟수 소진', `${name} 남은 횟수를 다 썼어요!`);
-    } else {
-      notify('스킬 사라짐', `${name} 스킬이 사라졌어요!`);
-    }
+    playAlertSound(region.soundId);
   };
 
   // 시간형은 아이콘이 보이든 가려졌든 사라졌든 설정한 시각이 되면 알린다
   const checkTimedAlert = (region) => {
-    if (region.counterType === 'time' && region.alertAt && !region.alerted && Date.now() >= region.alertAt) alertRegion(region, 'time');
+    if (region.counterType === 'time' && region.alertAt && !region.alerted && Date.now() >= region.alertAt) alertRegion(region);
   };
 
   const updateScale = () => {
@@ -386,13 +400,13 @@
     return /^\d{1,2}$/.test(text) ? Number(text) : null;
   };
 
-  const markGone = (region, usedUp = false) => {
+  const markGone = (region) => {
     region.status = 'gone';
     region.endsAt = null;
     region.hiddenSince = null;
     // 시간형은 알림 시각에 맞춰 따로 알린다 (음수 설정이면 사라진 뒤에 알림). 시각을 모르면(숫자를 못 읽음) 지금 알림
     if (region.counterType === 'time' && region.alertAt) return;
-    alertRegion(region, usedUp ? 'usedUp' : 'gone');
+    alertRegion(region);
   };
 
   const matchRegion = (region, rgba, sa) => {
@@ -431,7 +445,7 @@
           region.zeroStreak += 1;
           if (region.zeroStreak >= 2) {
             region.count = 0;
-            markGone(region, true);
+            markGone(region);
           } else {
             region.status = 'present';
           }
@@ -443,7 +457,7 @@
         // 남은 횟수가 다시 늘어났다 = 재시전
         if (region.count !== null && value > region.count) region.alerted = false;
         region.count = value;
-        if (region.alertAtCount > 0 && value <= region.alertAtCount) alertRegion(region, 'count');
+        if (region.alertAtCount > 0 && value <= region.alertAtCount) alertRegion(region);
       }
 
       region.status = 'present';
@@ -578,6 +592,7 @@
       counterType: counterType ?? null,
       alertBeforeSec: 0,
       alertAtCount: 0,
+      soundId: DEFAULT_SOUND_ID,
       id,
       name: name || `스킬 ${regions.length + 1}`,
       tplW,
@@ -660,7 +675,15 @@
     const idx = regions.findIndex((r) => r.id === id);
     if (idx !== -1) regions.splice(idx, 1);
     templateStore.delete(id);
+    openDetails.delete(id);
     persist();
+  };
+
+  // 상세 설정(최소 일치도·소리)을 펼친 스킬 id. 여러 개를 동시에 펼칠 수 있고 저장하지 않는다
+  const openDetails = reactive(new Set());
+  const toggleDetail = (id) => {
+    if (openDetails.has(id)) openDetails.delete(id);
+    else openDetails.add(id);
   };
 
   const onAlertSettingChange = (region) => {
@@ -718,7 +741,7 @@
   };
 
   const statusLabel = (r) => {
-    if (r.paused) return '일시정지';
+    if (r.paused) return '중지';
     const remain = remainingLabel(r);
     if (r.status === 'present') return remain ? `인식 중 · ${remain}` : '인식 중';
     if (r.status === 'hidden') {
@@ -727,6 +750,16 @@
     }
     if (r.status === 'gone') return r.counterType === 'count' && r.count === 0 ? '횟수 소진!' : '대기 중';
     return '대기 중';
+  };
+
+  const loadSounds = async () => {
+    try {
+      const res = await fetch('/skill-timer-presets/sounds.json');
+      if (!res.ok) return;
+      sounds.value = await res.json();
+    } catch {
+      // 소리 목록이 없으면 기본 소리만 사용
+    }
   };
 
   const statusSeverity = (r) => {
@@ -738,8 +771,8 @@
   };
 
   onMounted(async () => {
-    // 저장된 설정에 숫자 종류를 채우려면 기본 스킬 목록이 먼저 있어야 한다
-    await loadPresets();
+    // 저장된 설정에 숫자 종류와 소리를 채우려면 기본 스킬·소리 목록이 먼저 있어야 한다
+    await Promise.all([loadPresets(), loadSounds()]);
     await restore();
   });
 
@@ -747,6 +780,8 @@
     stopShare();
     templateStore.clear();
     audioCtx?.close();
+    audioCache.forEach((audio) => audio.pause());
+    audioCache.clear();
   });
 </script>
 
@@ -757,7 +792,6 @@
       <div class="flex flex-wrap items-center gap-2">
         <Button v-if="!isSharing" label="화면 공유 시작" icon="pi pi-desktop" @click="startShare" />
         <Button v-else label="화면 공유 중지" icon="pi pi-times" severity="danger" @click="stopShare" />
-        <Button label="알림 테스트" icon="pi pi-bell" severity="secondary" outlined @click="testAlert" />
         <Button v-if="searchArea" label="스킬 선택" icon="pi pi-images" severity="secondary" outlined @click="openPresetPicker" />
         <Button v-if="searchArea" label="초기화" icon="pi pi-refresh" severity="danger" outlined @click="resetSearchArea" />
       </div>
@@ -792,14 +826,18 @@
       <div class="flex flex-col">
         <!-- 모든 줄이 같은 열 너비를 쓰도록 제목줄과 각 줄에 같은 grid 템플릿을 사용 (모바일은 줄바꿈 배치) -->
         <div class="skill-row text-muted-color border-surface-200 hidden border-b pb-2 text-xs font-medium">
+          <span>감시</span>
           <span>기준 / 현재</span>
           <span>이름</span>
           <span>상태</span>
-          <span>최소 일치도</span>
           <span>알림</span>
           <span></span>
         </div>
         <div v-for="r in regions" :key="r.id" class="skill-row border-surface-200 flex flex-wrap items-center gap-3 border-b py-3 last:border-0">
+          <label class="flex cursor-pointer items-center gap-2">
+            <ToggleSwitch :modelValue="!r.paused" aria-label="감시" @update:modelValue="togglePause(r)" />
+            <span class="text-xs font-medium" :class="r.paused ? 'text-muted-color' : 'text-color'">{{ r.paused ? '꺼짐' : '켜짐' }}</span>
+          </label>
           <div class="flex items-center gap-1.5">
             <img :src="r.refPreviewSrc" crossorigin="anonymous" alt="기준 스킬" title="기준" class="border-surface-300 h-10 w-10 rounded border bg-black" />
             <i class="pi pi-angle-right text-muted-color text-xs"></i>
@@ -814,15 +852,9 @@
             <span class="text-muted-color text-xs">일치 {{ Math.max(0, Math.round(r.matchScore * 100)) }}%</span>
           </div>
 
-          <div class="flex items-center gap-2">
-            <span class="text-muted-color text-xs skill-mlabel">최소 일치도</span>
-            <Slider v-model="r.minMatchPercent" :min="20" :max="95" class="w-28" @slideend="persist" />
-            <span class="text-muted-color w-9 text-right text-xs">{{ r.minMatchPercent }}%</span>
-          </div>
-
           <div v-if="r.counterType" class="flex flex-col items-start gap-1">
             <div class="flex items-center gap-2">
-              <span class="text-muted-color text-xs skill-mlabel">알림</span>
+              <span class="text-muted-color skill-mlabel text-xs">알림</span>
               <InputNumber
                 v-if="r.counterType === 'time'"
                 v-model="r.alertBeforeSec"
@@ -852,8 +884,35 @@
           <span v-else class="text-muted-color text-xs">사라지면 알림</span>
 
           <div class="skill-actions ml-auto flex items-center justify-end gap-1">
-            <Button :icon="r.paused ? 'pi pi-play' : 'pi pi-pause'" text rounded v-tooltip.top="r.paused ? '다시 감시' : '일시정지'" @click="togglePause(r)" />
+            <Button
+              icon="pi pi-sliders-h"
+              :severity="openDetails.has(r.id) ? 'primary' : 'secondary'"
+              text
+              rounded
+              v-tooltip.top="'상세 설정'"
+              aria-label="상세 설정"
+              :aria-expanded="openDetails.has(r.id)"
+              @click="toggleDetail(r.id)"
+            />
             <Button icon="pi pi-trash" severity="danger" text rounded v-tooltip.top="'삭제'" @click="removeRegion(r.id)" />
+          </div>
+
+          <div v-if="openDetails.has(r.id)" class="skill-detail bg-surface-50 dark:bg-surface-800 flex w-full flex-wrap items-start gap-x-10 gap-y-4 rounded-lg px-4 py-3">
+            <div class="flex flex-col gap-1.5">
+              <span class="text-muted-color text-xs font-medium">최소 일치도</span>
+              <div class="flex items-center gap-3">
+                <Slider v-model="r.minMatchPercent" :min="20" :max="95" class="w-40" @slideend="persist" />
+                <span class="w-9 text-right text-sm">{{ r.minMatchPercent }}%</span>
+              </div>
+              <span class="text-muted-color text-xs">낮추면 잘 찾지만, 비슷한 다른 아이콘을 잘못 찾을 수 있어요</span>
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <span class="text-muted-color text-xs font-medium">소리</span>
+              <div class="flex items-center gap-1">
+                <Select v-model="r.soundId" :options="soundOptions" option-label="name" option-value="id" size="small" class="w-44" aria-label="알림 소리" @change="onSoundChange(r)" />
+                <Button v-tooltip.top="'소리 미리 듣기'" icon="pi pi-volume-up" severity="secondary" text rounded size="small" aria-label="소리 미리 듣기" @click="playAlertSound(r.soundId)" />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -881,31 +940,32 @@
   /* 사이드바를 빼면 표 형태 6칸이 들어갈 폭이 1280px부터라, 그 아래는 줄바꿈 배치.
      이 프로젝트의 Tailwind xl은 1200px이라 xl: 클래스를 섞으면 전환 시점이 어긋나므로, 표 전환은 여기서만 처리한다 */
   @media (min-width: 1280px) {
-    /* 아이콘 | 이름 | 상태 | 최소 일치도 | 알림 | 버튼
+    /* 감시 | 아이콘 | 이름 | 상태 | 알림 | 상세·삭제 (상세 설정은 다음 줄에 전체 폭으로)
        내용에 따라 열 너비가 달라지면 제목줄과 각 줄이 어긋나므로, 고정 폭과 비율(minmax(0, fr))만 사용 */
     .skill-row {
       display: grid;
-      /* 상태·최소 일치도는 내용 폭에 맞춘 고정 폭(화면이 넓어져도 사이가 벌어지지 않게).
-         이름은 최대 14rem까지만 늘고, 남는 폭은 알림 칸이 가져간다 (버튼은 오른쪽 끝) */
-      grid-template-columns: 7rem minmax(0, 14rem) 11rem 13rem minmax(11rem, 1fr) 4.5rem;
+      /* 이름은 최대 14rem까지만 늘고, 남는 폭은 알림 칸이 가져간다 (버튼은 오른쪽 끝) */
+      grid-template-columns: 5rem 7rem minmax(0, 14rem) 11rem minmax(11rem, 1fr) 4.5rem;
       column-gap: 1.25rem;
       align-items: center;
     }
+
     .skill-name {
       width: calc(100% - 1.5rem);
       max-width: 11rem;
     }
+
     .skill-mlabel {
       display: none;
     }
+
     .skill-actions {
       margin-left: 0;
     }
-  }
-  /* 1280~1535px는 폭이 빠듯해서 상태·최소 일치도 여백을 줄여 이름 칸에 나눠준다 */
-  @media (min-width: 1280px) and (max-width: 1535px) {
-    .skill-row {
-      grid-template-columns: 7rem minmax(0, 14rem) 10rem 11rem minmax(11rem, 1fr) 4.5rem;
+
+    .skill-detail {
+      grid-column: 1 / -1;
+      margin-top: 0.75rem;
     }
   }
 </style>
