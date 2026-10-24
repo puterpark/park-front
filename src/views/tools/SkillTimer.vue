@@ -2,6 +2,7 @@
   import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
   import { useAppToast } from '@/composables/useAppToast';
   import { useSeo } from '@/composables/useSeo';
+  import { DIGIT_STYLES } from '@/constants/skillTimerDigits';
 
   useSeo({
     title: 'Skill Timer',
@@ -27,6 +28,9 @@
   const dragOrigin = ref({ x: 0, y: 0 });
   const selectRect = ref(null);
 
+  // 가려진 동안에도 남은 시간 표시가 줄어들도록 매 틱 갱신하는 현재 시각
+  const nowTick = ref(Date.now());
+
   let pollTimer = null;
   let resizeObserver = null;
   let ticking = false;
@@ -35,6 +39,12 @@
   // 캐릭터나 스킬 이펙트가 잠깐 스킬을 가리는 경우를 걸러내기 위해 연속으로 안 보여야 사라진 것으로 판단
   const GONE_TICKS = 3;
   const SAMPLE_POINTS = 64;
+  // 숫자 템플릿과 이 픽셀 수까지 달라도 같은 숫자로 본다
+  const GLYPH_TOLERANCE = 4;
+  // 시간형: 남은 시간을 읽은 시점과 실제 종료 사이의 오차 여유
+  const END_SLACK_MS = 1500;
+  // 횟수형: 횟수가 남은 채로 가려진 상태가 이만큼 이어지면 그래도 알림 (숫자를 잘못 읽어 알림을 놓치는 것 방지)
+  const HIDDEN_FALLBACK_MS = 30000;
 
   const captureCanvas = document.createElement('canvas');
   const captureCtx = captureCanvas.getContext('2d', { willReadFrequently: true });
@@ -44,6 +54,16 @@
 
   const presets = ref([]);
   const showPresetDialog = ref(false);
+
+  // 아이콘 숫자로 판단하기 위한 실행 중 상태 (저장하지 않음)
+  const counterState = () => ({
+    endsAt: null, // 시간형: 예상 종료 시각(ms)
+    alertAt: null, // 시간형: 알림 시각(ms) = 종료 시각 - 알림 오프셋. 사라진 뒤에도 유지 (음수 오프셋은 종료 후 알림)
+    count: null, // 횟수형: 마지막으로 읽은 남은 횟수
+    alerted: false, // 이번 시전에서 이미 알렸는지 (한 번 시전에 한 번만 알림)
+    zeroStreak: 0,
+    hiddenSince: null,
+  });
 
   const STORAGE_KEY = 'skill-timer-config-v1';
   const ICON_BASE_URL = 'https://cdn.puter.us/images/skill-icon/';
@@ -61,6 +81,9 @@
           lastY: r.lastY,
           minMatchPercent: r.minMatchPercent,
           paused: r.paused,
+          counterType: r.counterType,
+          alertBeforeSec: r.alertBeforeSec,
+          alertAtCount: r.alertAtCount,
           refPreviewSrc: r.refPreviewSrc,
         })),
       };
@@ -147,7 +170,10 @@
         const { template, w, h } = await loadImageTemplate(iconSrc);
         const id = regionSeq++;
         templateStore.set(id, template);
+        // 숫자 종류가 저장되기 전의 설정은 기본 스킬 목록에서 같은 이미지를 찾아 채운다
+        const preset = presets.value.find((p) => iconSrc.endsWith(`/${p.file}`));
         regions.push({
+          ...counterState(),
           id,
           name: saved.name,
           tplW: saved.tplW ?? w,
@@ -156,10 +182,13 @@
           lastY: saved.lastY,
           matchScore: 0,
           minMatchPercent: saved.minMatchPercent ?? 50,
+          counterType: saved.counterType ?? preset?.counter ?? null,
+          alertBeforeSec: saved.alertBeforeSec ?? 0,
+          alertAtCount: saved.alertAtCount ?? 0,
           status: undefined,
           absentStreak: 0,
           paused: saved.paused ?? false,
-          previewSrc: iconSrc,
+          previewSrc: '',
           refPreviewSrc: iconSrc,
         });
       }
@@ -198,12 +227,37 @@
     }
   };
 
-  const notifyGone = (name) => {
+  const notify = (title, message) => {
     beep();
-    toast.warn('스킬 사라짐', `"${name}" 스킬이 사라졌어요!`, 10000);
+    toast.warn(title, message, 10000);
   };
 
-  const testAlert = () => notifyGone('테스트 스킬');
+  const testAlert = () => notify('스킬 알림', '"테스트 스킬" 알림 테스트예요!');
+
+  // 한 번 시전에 한 번만 알린다. reason: 'time'(설정한 시각) | 'count'(설정한 횟수) | 'usedUp' | 'gone'
+  const alertRegion = (region, reason) => {
+    if (region.alerted) return;
+    region.alerted = true;
+    region.alertAt = null;
+    const name = `"${region.name}"`;
+    if (reason === 'time') {
+      const sec = region.alertBeforeSec;
+      if (sec > 0) notify('스킬 알림', `${name} ${sec}초 후에 끝나요!`);
+      else if (sec < 0) notify('스킬 알림', `${name} 끝난 지 ${-sec}초 지났어요!`);
+      else notify('스킬 종료', `${name} 끝났어요!`);
+    } else if (reason === 'count') {
+      notify('스킬 알림', `${name} ${region.count}회 남았어요!`);
+    } else if (reason === 'usedUp') {
+      notify('횟수 소진', `${name} 남은 횟수를 다 썼어요!`);
+    } else {
+      notify('스킬 사라짐', `${name} 스킬이 사라졌어요!`);
+    }
+  };
+
+  // 시간형은 아이콘이 보이든 가려졌든 사라졌든 설정한 시각이 되면 알린다
+  const checkTimedAlert = (region) => {
+    if (region.counterType === 'time' && region.alertAt && !region.alerted && Date.now() >= region.alertAt) alertRegion(region, 'time');
+  };
 
   const updateScale = () => {
     if (videoRef.value && videoRef.value.videoWidth) {
@@ -266,12 +320,88 @@
     return best;
   };
 
+  // 아이콘 위 숫자를 읽는다. 숫자 색 픽셀이 이어진 세로줄 묶음을 한 글자로 보고 템플릿과 비교.
+  // 반환: 읽은 문자열('' = 숫자 없음), 모르는 모양이 섞이면 null
+  const readDigits = (rgba, saW, lx, ly, style) => {
+    const { box, isInk, glyphs } = DIGIT_STYLES[style];
+    const ink = (x, y) => {
+      const i = ((ly + y) * saW + lx + x) * 4;
+      return isInk(rgba[i], rgba[i + 1], rgba[i + 2]);
+    };
+    const colHasInk = (x) => {
+      for (let y = box.y0; y <= box.y1; y++) if (ink(x, y)) return true;
+      return false;
+    };
+
+    let text = '';
+    let x = box.x0;
+    while (x <= box.x1) {
+      if (!colHasInk(x)) {
+        x++;
+        continue;
+      }
+      let end = x;
+      while (end <= box.x1 && colHasInk(end)) end++;
+
+      const rows = [];
+      for (let y = box.y0; y <= box.y1; y++) {
+        let row = '';
+        for (let c = x; c < end; c++) row += ink(c, y) ? '#' : '.';
+        rows.push(row);
+      }
+      const glyph = rows.join('/');
+
+      let best = null;
+      let bestDist = Infinity;
+      for (const [ch, list] of Object.entries(glyphs)) {
+        for (const t of list) {
+          if (t.length !== glyph.length) continue;
+          let d = 0;
+          for (let i = 0; i < t.length; i++) if (t[i] !== glyph[i]) d++;
+          if (d < bestDist) {
+            bestDist = d;
+            best = ch;
+          }
+        }
+      }
+      if (bestDist > GLYPH_TOLERANCE) return null;
+      text += best;
+      x = end;
+    }
+    return text;
+  };
+
+  // 시간형은 남은 초, 횟수형은 남은 횟수를 돌려준다. 못 읽으면 null
+  const readCounter = (rgba, sa, lx, ly, region) => {
+    if (!region.counterType || region.tplW !== 32 || region.tplH !== 32) return null;
+    const text = readDigits(rgba, sa.w, lx, ly, region.counterType);
+    if (text === null) return null;
+    if (region.counterType === 'time') {
+      const mmss = text.match(/^(\d{1,2}):(\d{2})$/);
+      if (mmss) return Number(mmss[1]) * 60 + Number(mmss[2]);
+      return /^\d{1,3}$/.test(text) ? Number(text) : null;
+    }
+    // 횟수가 0이 되면 숫자만 사라지고 아이콘은 남는다
+    if (text === '') return 0;
+    return /^\d{1,2}$/.test(text) ? Number(text) : null;
+  };
+
+  const markGone = (region, usedUp = false) => {
+    region.status = 'gone';
+    region.endsAt = null;
+    region.hiddenSince = null;
+    // 시간형은 알림 시각에 맞춰 따로 알린다 (음수 설정이면 사라진 뒤에 알림). 시각을 모르면(숫자를 못 읽음) 지금 알림
+    if (region.counterType === 'time' && region.alertAt) return;
+    alertRegion(region, usedUp ? 'usedUp' : 'gone');
+  };
+
   const matchRegion = (region, rgba, sa) => {
     const tpl = templateStore.get(region.id);
     if (!tpl) return;
     const tw = region.tplW;
     const th = region.tplH;
     const minMatch = region.minMatchPercent / 100;
+    const now = Date.now();
 
     const found = findIcon(rgba, sa, tpl, tw, th, minMatch, region.lastX - sa.x, region.lastY - sa.y);
     region.matchScore = found.score;
@@ -279,18 +409,64 @@
     if (found.score >= minMatch) {
       region.lastX = found.lx + sa.x;
       region.lastY = found.ly + sa.y;
-      region.status = 'present';
       region.absentStreak = 0;
+      region.hiddenSince = null;
       region.previewSrc = cropToDataUrl(captureCanvas, region.lastX, region.lastY, tw, th);
+
+      // 사라졌던 스킬이 다시 보이면 새로 시전한 것 → 다음 알림 준비
+      if (region.status === 'gone') region.alerted = false;
+
+      const value = readCounter(rgba, sa, found.lx, found.ly, region);
+      if (region.counterType === 'time' && value !== null) {
+        const endsAt = now + value * 1000;
+        // 남은 시간이 다시 늘어났다 = 재시전
+        if (region.endsAt && endsAt > region.endsAt + 2000) region.alerted = false;
+        region.endsAt = endsAt;
+        region.alertAt = endsAt - region.alertBeforeSec * 1000;
+      }
+
+      if (region.counterType === 'count' && value !== null) {
+        if (value === 0 && region.count >= 1) {
+          // 숫자가 사라졌다 = 횟수를 다 씀. 잠깐 가려져 숫자만 안 보이는 경우를 걸러내려고 2번 연속 확인
+          region.zeroStreak += 1;
+          if (region.zeroStreak >= 2) {
+            region.count = 0;
+            markGone(region, true);
+          } else {
+            region.status = 'present';
+          }
+          return;
+        }
+        region.zeroStreak = 0;
+        // 횟수를 다 쓴 아이콘이 그대로 떠 있는 동안은 '사라짐' 상태 유지
+        if (value === 0 && region.count === 0 && region.status === 'gone') return;
+        // 남은 횟수가 다시 늘어났다 = 재시전
+        if (region.count !== null && value > region.count) region.alerted = false;
+        region.count = value;
+        if (region.alertAtCount > 0 && value <= region.alertAtCount) alertRegion(region, 'count');
+      }
+
+      region.status = 'present';
       return;
     }
 
     region.absentStreak += 1;
     region.previewSrc = cropToDataUrl(captureCanvas, region.lastX, region.lastY, tw, th);
-    if (region.status === 'present' && region.absentStreak >= GONE_TICKS) {
-      region.status = 'gone';
-      notifyGone(region.name);
+    if (region.status !== 'present' && region.status !== 'hidden') return;
+    region.hiddenSince ??= now;
+
+    // 숫자로 남은 양을 알면, 남아 있는 동안 안 보이는 건 인벤토리 창/이펙트에 가려진 것으로 본다
+    let gone;
+    if (region.counterType === 'time' && region.endsAt) {
+      gone = now >= region.endsAt - END_SLACK_MS;
+    } else if (region.counterType === 'count' && region.count !== null) {
+      gone = region.count <= 1 ? region.absentStreak >= 2 : now - region.hiddenSince >= HIDDEN_FALLBACK_MS;
+    } else {
+      gone = region.absentStreak >= GONE_TICKS;
     }
+
+    if (gone) markGone(region);
+    else region.status = 'hidden';
   };
 
   const tick = async () => {
@@ -299,6 +475,7 @@
     try {
       const video = videoRef.value;
       if (!video.videoWidth) return;
+      nowTick.value = Date.now();
       captureCanvas.width = video.videoWidth;
       captureCanvas.height = video.videoHeight;
       captureCtx.drawImage(video, 0, 0);
@@ -309,6 +486,7 @@
       for (const region of regions) {
         if (region.paused) continue;
         matchRegion(region, rgba, sa);
+        checkTimedAlert(region);
       }
     } finally {
       ticking = false;
@@ -363,6 +541,10 @@
       stream.value = null;
     }
     isSharing.value = false;
+    // 감시가 끝났으니 화면 공유 중에만 의미 있는 값(현재 모습, 상태, 일치도, 남은 시간/횟수)은 처음 상태로 되돌린다
+    regions.forEach((r) => {
+      Object.assign(r, counterState(), { previewSrc: '', status: undefined, matchScore: 0, absentStreak: 0 });
+    });
   };
 
   const getRelPoint = (e) => {
@@ -388,10 +570,14 @@
     };
   };
 
-  const addSkillRegion = ({ name, tplW, tplH, template, previewSrc, initialX, initialY }) => {
+  const addSkillRegion = ({ name, tplW, tplH, template, iconSrc, initialX, initialY, counterType }) => {
     const id = regionSeq++;
     templateStore.set(id, template);
     regions.push({
+      ...counterState(),
+      counterType: counterType ?? null,
+      alertBeforeSec: 0,
+      alertAtCount: 0,
       id,
       name: name || `스킬 ${regions.length + 1}`,
       tplW,
@@ -403,8 +589,8 @@
       status: undefined,
       absentStreak: 0,
       paused: false,
-      previewSrc,
-      refPreviewSrc: previewSrc,
+      previewSrc: '',
+      refPreviewSrc: iconSrc,
     });
     persist();
   };
@@ -432,7 +618,7 @@
       const src = `${ICON_BASE_URL}${preset.file}`;
       const { template, w, h } = await loadImageTemplate(src);
       const sa = searchArea.value;
-      addSkillRegion({ name: preset.name, tplW: w, tplH: h, template, previewSrc: src, initialX: sa.x, initialY: sa.y });
+      addSkillRegion({ name: preset.name, tplW: w, tplH: h, template, iconSrc: src, initialX: sa.x, initialY: sa.y, counterType: preset.counter });
       showPresetDialog.value = false;
       toast.success('등록 완료', `"${preset.name}" 스킬을 등록했어요. 화면에 보이면 자동으로 찾아서 감시해요.`);
     } catch {
@@ -477,6 +663,23 @@
     persist();
   };
 
+  const onAlertSettingChange = (region) => {
+    region.alertBeforeSec ??= 0;
+    region.alertAtCount ??= 0;
+    if (region.counterType === 'time' && region.endsAt && !region.alerted) region.alertAt = region.endsAt - region.alertBeforeSec * 1000;
+    persist();
+  };
+
+  const alertHint = (r) => {
+    if (r.counterType === 'time') {
+      const sec = r.alertBeforeSec ?? 0;
+      if (sec > 0) return `끝나기 ${sec}초 전`;
+      if (sec < 0) return `끝나고 ${-sec}초 후`;
+      return '끝날 때';
+    }
+    return (r.alertAtCount ?? 0) > 0 ? `${r.alertAtCount}회 남았을 때` : '다 썼을 때';
+  };
+
   const togglePause = (region) => {
     region.paused = !region.paused;
     persist();
@@ -506,24 +709,38 @@
     return { left: `${x}px`, top: `${y}px`, width: `${w}px`, height: `${h}px` };
   });
 
+  const formatSeconds = (sec) => (sec >= 60 ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}` : `${sec}초`);
+
+  const remainingLabel = (r) => {
+    if (r.counterType === 'time' && r.endsAt) return `${formatSeconds(Math.max(0, Math.round((r.endsAt - nowTick.value) / 1000)))} 남음`;
+    if (r.counterType === 'count' && r.count !== null) return `${r.count}회 남음`;
+    return '';
+  };
+
   const statusLabel = (r) => {
     if (r.paused) return '일시정지';
-    const match = `일치 ${Math.max(0, Math.round(r.matchScore * 100))}%`;
-    if (r.status === 'present') return `떠 있음 (${match})`;
-    if (r.status === 'gone') return `사라짐! (${match})`;
-    return `아직 안 보임 (${match})`;
+    const remain = remainingLabel(r);
+    if (r.status === 'present') return remain ? `인식 중 · ${remain}` : '인식 중';
+    if (r.status === 'hidden') {
+      if (remain) return `찾는 중 · ${r.counterType === 'count' ? `마지막 ${remain}` : `약 ${remain}`}`;
+      return `찾는 중 ${r.absentStreak}/${GONE_TICKS}`;
+    }
+    if (r.status === 'gone') return r.counterType === 'count' && r.count === 0 ? '횟수 소진!' : '대기 중';
+    return '대기 중';
   };
 
   const statusSeverity = (r) => {
     if (r.paused) return 'secondary';
     if (r.status === 'present') return 'success';
+    if (r.status === 'hidden') return 'warn';
     if (r.status === 'gone') return 'danger';
     return 'secondary';
   };
 
-  onMounted(() => {
-    restore();
-    loadPresets();
+  onMounted(async () => {
+    // 저장된 설정에 숫자 종류를 채우려면 기본 스킬 목록이 먼저 있어야 한다
+    await loadPresets();
+    await restore();
   });
 
   onBeforeUnmount(() => {
@@ -542,7 +759,7 @@
         <Button v-else label="화면 공유 중지" icon="pi pi-times" severity="danger" @click="stopShare" />
         <Button label="알림 테스트" icon="pi pi-bell" severity="secondary" outlined @click="testAlert" />
         <Button v-if="searchArea" label="스킬 선택" icon="pi pi-images" severity="secondary" outlined @click="openPresetPicker" />
-        <Button v-if="searchArea" label="검색 영역 다시 지정" icon="pi pi-refresh" severity="secondary" outlined @click="resetSearchArea" />
+        <Button v-if="searchArea" label="초기화" icon="pi pi-refresh" severity="danger" outlined @click="resetSearchArea" />
       </div>
     </div>
   </div>
@@ -562,6 +779,7 @@
         <div v-if="searchArea" class="border-primary pointer-events-none absolute border-2 border-dashed" :style="searchAreaBoxStyle"></div>
         <template v-for="r in regions" :key="`box-${r.id}`">
           <div v-if="r.status === 'present'" class="pointer-events-none absolute border-2 border-green-500" :style="regionBoxStyle(r)"></div>
+          <div v-else-if="r.status === 'hidden'" class="pointer-events-none absolute border-2 border-dashed border-amber-500" :style="regionBoxStyle(r)"></div>
         </template>
         <div v-if="selectRect" class="border-primary bg-primary/20 pointer-events-none absolute border-2 border-dashed" :style="selectRectStyle"></div>
       </div>
@@ -571,25 +789,72 @@
   <div class="mt-8 flex" v-if="regions.length">
     <div class="card flex w-full flex-col gap-4">
       <div class="text-xl font-semibold">감시 중인 스킬</div>
-      <div v-for="r in regions" :key="r.id" class="border-surface-200 flex flex-wrap items-center gap-3 border-b pb-4 last:border-0 last:pb-0">
-        <div class="flex flex-col items-center gap-1">
-          <span class="text-muted-color text-xs">기준</span>
-          <img :src="r.refPreviewSrc" crossorigin="anonymous" alt="기준 스킬" class="border-surface-300 h-10 w-auto rounded border bg-black" />
+      <div class="flex flex-col">
+        <!-- 모든 줄이 같은 열 너비를 쓰도록 제목줄과 각 줄에 같은 grid 템플릿을 사용 (모바일은 줄바꿈 배치) -->
+        <div class="skill-row text-muted-color border-surface-200 hidden border-b pb-2 text-xs font-medium">
+          <span>기준 / 현재</span>
+          <span>이름</span>
+          <span>상태</span>
+          <span>최소 일치도</span>
+          <span>알림</span>
+          <span></span>
         </div>
-        <div class="flex flex-col items-center gap-1">
-          <span class="text-muted-color text-xs">현재</span>
-          <img v-if="r.previewSrc" :src="r.previewSrc" alt="현재 스킬" class="border-surface-300 h-10 w-auto rounded border bg-black" />
-        </div>
-        <InputText v-model="r.name" class="w-40" size="small" @blur="persist" />
-        <Tag :value="statusLabel(r)" :severity="statusSeverity(r)" />
-        <div class="flex items-center gap-2">
-          <label class="text-muted-color text-xs">최소 일치도</label>
-          <Slider v-model="r.minMatchPercent" :min="20" :max="95" class="w-32" @slideend="persist" />
-          <span class="text-muted-color text-xs">{{ r.minMatchPercent }}%</span>
-        </div>
-        <div class="flex items-center gap-2 md:ml-auto">
-          <Button :icon="r.paused ? 'pi pi-play' : 'pi pi-pause'" text rounded @click="togglePause(r)" />
-          <Button icon="pi pi-trash" severity="danger" text rounded @click="removeRegion(r.id)" />
+        <div v-for="r in regions" :key="r.id" class="skill-row border-surface-200 flex flex-wrap items-center gap-3 border-b py-3 last:border-0">
+          <div class="flex items-center gap-1.5">
+            <img :src="r.refPreviewSrc" crossorigin="anonymous" alt="기준 스킬" title="기준" class="border-surface-300 h-10 w-10 rounded border bg-black" />
+            <i class="pi pi-angle-right text-muted-color text-xs"></i>
+            <img v-if="r.previewSrc" :src="r.previewSrc" alt="현재 스킬" title="현재" class="border-surface-300 h-10 w-10 rounded border bg-black" />
+            <div v-else class="border-surface-300 text-muted-color flex h-10 w-10 items-center justify-center rounded border border-dashed text-xs" title="화면 공유 중에만 표시돼요">-</div>
+          </div>
+
+          <InputText v-model="r.name" class="skill-name w-40" size="small" @blur="persist" />
+
+          <div class="flex flex-col items-start gap-1">
+            <Tag :value="statusLabel(r)" :severity="statusSeverity(r)" />
+            <span class="text-muted-color text-xs">일치 {{ Math.max(0, Math.round(r.matchScore * 100)) }}%</span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <span class="text-muted-color text-xs skill-mlabel">최소 일치도</span>
+            <Slider v-model="r.minMatchPercent" :min="20" :max="95" class="w-28" @slideend="persist" />
+            <span class="text-muted-color w-9 text-right text-xs">{{ r.minMatchPercent }}%</span>
+          </div>
+
+          <div v-if="r.counterType" class="flex flex-col items-start gap-1">
+            <div class="flex items-center gap-2">
+              <span class="text-muted-color text-xs skill-mlabel">알림</span>
+              <InputNumber
+                v-if="r.counterType === 'time'"
+                v-model="r.alertBeforeSec"
+                :min="-5"
+                :max="20"
+                showButtons
+                buttonLayout="horizontal"
+                size="small"
+                :inputStyle="{ width: '3rem', textAlign: 'center' }"
+                @update:modelValue="onAlertSettingChange(r)"
+              />
+              <InputNumber
+                v-else
+                v-model="r.alertAtCount"
+                :min="0"
+                :max="10"
+                showButtons
+                buttonLayout="horizontal"
+                size="small"
+                :inputStyle="{ width: '3rem', textAlign: 'center' }"
+                @update:modelValue="onAlertSettingChange(r)"
+              />
+              <span class="text-muted-color text-xs">{{ r.counterType === 'time' ? '초 전' : '회 남음' }}</span>
+            </div>
+            <span class="text-muted-color text-xs">{{ alertHint(r) }} 알림</span>
+          </div>
+          <span v-else class="text-muted-color text-xs">사라지면 알림</span>
+
+          <div class="skill-actions ml-auto flex items-center justify-end gap-1">
+            <Button :icon="r.paused ? 'pi pi-play' : 'pi pi-pause'" text rounded v-tooltip.top="r.paused ? '다시 감시' : '일시정지'" @click="togglePause(r)" />
+            <Button icon="pi pi-trash" severity="danger" text rounded v-tooltip.top="'삭제'" @click="removeRegion(r.id)" />
+          </div>
         </div>
       </div>
     </div>
@@ -611,3 +876,36 @@
     </div>
   </Dialog>
 </template>
+
+<style scoped>
+  /* 사이드바를 빼면 표 형태 6칸이 들어갈 폭이 1280px부터라, 그 아래는 줄바꿈 배치.
+     이 프로젝트의 Tailwind xl은 1200px이라 xl: 클래스를 섞으면 전환 시점이 어긋나므로, 표 전환은 여기서만 처리한다 */
+  @media (min-width: 1280px) {
+    /* 아이콘 | 이름 | 상태 | 최소 일치도 | 알림 | 버튼
+       내용에 따라 열 너비가 달라지면 제목줄과 각 줄이 어긋나므로, 고정 폭과 비율(minmax(0, fr))만 사용 */
+    .skill-row {
+      display: grid;
+      /* 상태·최소 일치도는 내용 폭에 맞춘 고정 폭(화면이 넓어져도 사이가 벌어지지 않게).
+         이름은 최대 14rem까지만 늘고, 남는 폭은 알림 칸이 가져간다 (버튼은 오른쪽 끝) */
+      grid-template-columns: 7rem minmax(0, 14rem) 11rem 13rem minmax(11rem, 1fr) 4.5rem;
+      column-gap: 1.25rem;
+      align-items: center;
+    }
+    .skill-name {
+      width: calc(100% - 1.5rem);
+      max-width: 11rem;
+    }
+    .skill-mlabel {
+      display: none;
+    }
+    .skill-actions {
+      margin-left: 0;
+    }
+  }
+  /* 1280~1535px는 폭이 빠듯해서 상태·최소 일치도 여백을 줄여 이름 칸에 나눠준다 */
+  @media (min-width: 1280px) and (max-width: 1535px) {
+    .skill-row {
+      grid-template-columns: 7rem minmax(0, 14rem) 10rem 11rem minmax(11rem, 1fr) 4.5rem;
+    }
+  }
+</style>

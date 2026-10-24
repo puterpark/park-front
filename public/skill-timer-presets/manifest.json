@@ -2,51 +2,61 @@
   {
     "id": "sol-janus",
     "name": "솔 야누스 : 새벽",
-    "file": "sol-janus.png"
+    "file": "sol-janus.png",
+    "counter": "time"
   },
   {
     "id": "erda-fountain",
     "name": "에르다 파운틴",
-    "file": "erda-fountain.png"
+    "file": "erda-fountain.png",
+    "counter": "time"
   },
   {
     "id": "maehwa-yein-vi",
     "name": "매화검 3초식 : 예인 VI",
-    "file": "maehwa-yein-vi.png"
+    "file": "maehwa-yein-vi.png",
+    "counter": "count"
   },
   {
     "id": "frozen-ground-vi",
     "name": "프로즌 그라운드 VI",
-    "file": "frozen-ground-vi.png"
+    "file": "frozen-ground-vi.png",
+    "counter": "time"
   },
   {
     "id": "gate-of-light",
     "name": "진리의 문",
-    "file": "gate-of-light.png"
+    "file": "gate-of-light.png",
+    "counter": "time"
   },
   {
     "id": "heupseong-waryu-vi",
     "name": "흡성와류 VI",
-    "file": "heupseong-waryu-vi.png"
+    "file": "heupseong-waryu-vi.png",
+    "counter": "time"
   },
   {
     "id": "hologram-graffiti-barrier-vi",
     "name": "홀로그램 그래피티: 역장 VI",
-    "file": "hologram-graffiti-barrier-vi.png"
+    "file": "hologram-graffiti-barrier-vi.png",
+    "counter": "time"
   },
   {
     "id": "liberation-orb",
     "name": "리버레이션 오브",
-    "file": "liberation-orb.png"
+    "file": "liberation-orb.png",
+    "counter": "time"
   },
   {
     "id": "petrified-vi",
     "name": "페트리파이드 VI",
-    "file": "petrified-vi.png"
+    "file": "petrified-vi.png",
+    "counter": "time"
   },
   {
     "id": "sword-of-burning-soul",
     "name": "소드 오브 버닝 소울",
-    "file": "sword-of-burning-soul.png"
+    "file": "sword-of-burning-soul.png",
+    "counter": "time"
   }
 ]
