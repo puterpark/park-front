@@ -84,6 +84,11 @@
   // 캐릭터나 스킬 이펙트가 잠깐 스킬을 가리는 경우를 걸러내기 위해 연속으로 안 보여야 사라진 것으로 판단
   const GONE_TICKS = 3;
   const SAMPLE_POINTS = 64;
+  // 버프 아이콘은 모두 비슷한 밝은 테두리가 있어서, 모양이 다른 아이콘끼리도 전체 일치도가 60%대까지 나온다.
+  // 그래서 테두리(ICON_BORDER px)를 뺀 안쪽 일치도가 INNER_MIN_MATCH 이상일 때만 같은 스킬로 본다.
+  // (다른 아이콘끼리는 안쪽 일치도가 최고 24%, 숫자가 겹친 같은 아이콘은 최저 45% 정도)
+  const ICON_BORDER = 2;
+  const INNER_MIN_MATCH = 0.3;
   // 숫자 템플릿과 이 픽셀 수까지 달라도 같은 숫자로 본다
   const GLYPH_TOLERANCE = 4;
   // 시간형: 남은 시간을 읽은 시점과 실제 종료 사이의 오차 여유
@@ -187,14 +192,20 @@
 
   // 투명한 픽셀(스킬 배경)은 비교에서 빼고, 빠른 1차 거르기용 표본 픽셀도 따로 뽑아둔다
   const buildTemplate = (imgData) => {
-    const { data, width } = imgData;
+    const { data, width, height } = imgData;
     const opaque = [];
-    for (let p = 0; p < width * imgData.height; p++) {
+    for (let p = 0; p < width * height; p++) {
       if (data[p * 4 + 3] >= 128) opaque.push(p);
     }
+    const inner = opaque.filter((p) => {
+      const x = p % width;
+      const y = Math.floor(p / width);
+      return x >= ICON_BORDER && y >= ICON_BORDER && x < width - ICON_BORDER && y < height - ICON_BORDER;
+    });
     const step = Math.max(1, Math.floor(opaque.length / SAMPLE_POINTS));
     return {
       full: buildPointSet(data, width, opaque),
+      inner: buildPointSet(data, width, inner),
       quick: buildPointSet(
         data,
         width,
@@ -390,11 +401,13 @@
 
   // 직전 위치에 그대로 있으면 바로 끝내고, 없으면 영역 전체를 1px 단위로 찾는다 (스킬은 1px만 어긋나도 값이 크게 떨어짐).
   // 표본 픽셀로 먼저 대충 비교해서 확실히 아닌 위치는 건너뛴다.
+  // 테두리를 뺀 안쪽이 닮지 않은 위치(다른 스킬 아이콘)는 전체 일치도가 높아도 후보에서 뺀다.
   const findIcon = (rgba, sa, tpl, tw, th, minMatch, lastLx, lastLy) => {
+    const innerMatches = (lx, ly) => colorNcc(rgba, sa.w, lx, ly, tpl.inner) >= INNER_MIN_MATCH;
     const inArea = (lx, ly) => lx >= 0 && ly >= 0 && lx + tw <= sa.w && ly + th <= sa.h;
     if (inArea(lastLx, lastLy)) {
       const atLast = colorNcc(rgba, sa.w, lastLx, lastLy, tpl.full);
-      if (atLast >= minMatch) return { score: atLast, lx: lastLx, ly: lastLy };
+      if (atLast >= minMatch && innerMatches(lastLx, lastLy)) return { score: atLast, lx: lastLx, ly: lastLy };
     }
 
     const quickMin = minMatch - 0.2;
@@ -403,7 +416,7 @@
       for (let lx = 0; lx <= sa.w - tw; lx++) {
         if (colorNcc(rgba, sa.w, lx, ly, tpl.quick) < quickMin) continue;
         const score = colorNcc(rgba, sa.w, lx, ly, tpl.full);
-        if (score > best.score) best = { score, lx, ly };
+        if (score > best.score && innerMatches(lx, ly)) best = { score, lx, ly };
       }
     }
     return best;
