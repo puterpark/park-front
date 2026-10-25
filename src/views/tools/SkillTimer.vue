@@ -93,7 +93,7 @@
   const GLYPH_TOLERANCE = 4;
   // 시간형: 남은 시간을 읽은 시점과 실제 종료 사이의 오차 여유
   const END_SLACK_MS = 1500;
-  // 횟수형: 횟수가 남은 채로 가려진 상태가 이만큼 이어지면 그래도 알림 (숫자를 잘못 읽어 알림을 놓치는 것 방지)
+  // 횟수형: 2회 이상 남은 채로 이만큼 안 보이면 알림 없이 '대기 중'으로 바꾼다 (숫자를 잘못 읽어 '찾는 중'에 계속 머무는 것 방지)
   const HIDDEN_FALLBACK_MS = 30000;
 
   const captureCanvas = document.createElement('canvas');
@@ -112,7 +112,7 @@
     count: null, // 횟수형: 마지막으로 읽은 남은 횟수
     alerted: false, // 이번 시전에서 이미 알렸는지 (한 번 시전에 한 번만 알림)
     zeroStreak: 0,
-    hiddenSince: null,
+    hiddenSince: null, // 안 보이기 시작한 시각(ms)
   });
 
   const STORAGE_KEY = 'skill-timer-config-v1';
@@ -289,7 +289,7 @@
 
       persist();
       const next = searchArea.value ? '화면 공유를 시작하면 바로 감시해요.' : '화면 공유 후 검색 영역을 지정하면 감시를 시작해요.';
-      toast.info('저장된 설정을 불러왔어요', `스킬 ${regions.length}개를 복원했어요. ${next}`);
+      toast.info('저장된 설정을 불러왔어요', `${next}`);
       const failed = regions.filter((r) => r.loadFailed).length;
       if (failed) toast.warn('스킬 이미지를 불러오지 못했어요', `${failed}개는 감시하지 않아요. 설정은 남겨뒀으니 새로고침하면 다시 시도해요.`);
     } catch {
@@ -488,10 +488,12 @@
     return /^\d{1,2}$/.test(text) ? Number(text) : null;
   };
 
-  const markGone = (region) => {
+  // silent: 사라진 것으로만 처리하고 알리지는 않는다
+  const markGone = (region, { silent = false } = {}) => {
     region.status = 'gone';
     region.endsAt = null;
     region.hiddenSince = null;
+    if (silent) return;
     // 시간형은 알림 시각에 맞춰 따로 알린다 (음수 설정이면 사라진 뒤에 알림). 시각을 모르면(숫자를 못 읽음) 지금 알림
     if (region.counterType === 'time' && region.alertAt) return;
     alertRegion(region);
@@ -562,7 +564,14 @@
     if (region.counterType === 'time' && region.endsAt) {
       gone = now >= region.endsAt - END_SLACK_MS;
     } else if (region.counterType === 'count' && region.count !== null) {
-      gone = region.count <= 1 ? region.absentStreak >= 2 : now - region.hiddenSince >= HIDDEN_FALLBACK_MS;
+      // 마지막 1회 이하면 다 쓰고 사라진 것으로 보고 알린다
+      if (region.count > 1) {
+        // 2회 이상 남은 채로 안 보이면 가려진 것으로 보고 기다리다가, 오래 안 보이면 알림 없이 '대기 중'으로
+        if (now - region.hiddenSince >= HIDDEN_FALLBACK_MS) markGone(region, { silent: true });
+        else region.status = 'hidden';
+        return;
+      }
+      gone = region.absentStreak >= 2;
     } else {
       gone = region.absentStreak >= GONE_TICKS;
     }
