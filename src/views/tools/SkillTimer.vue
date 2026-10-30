@@ -2,8 +2,9 @@
   import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
   import { useAppToast } from '@/composables/useAppToast';
   import { useSeo } from '@/composables/useSeo';
+  import { BOOSTER_LABEL, BOOSTER_PANEL_FULL, readBoosterSeconds } from '@/constants/skillTimerBooster';
   import { DIGIT_STYLES } from '@/constants/skillTimerDigits';
-  import { RUNE_SIZE, createRuneReferenceImage, findRune } from '@/constants/skillTimerRune';
+  import { RUNE_SIZE, findRune } from '@/constants/skillTimerRune';
 
   useSeo({
     title: 'Skill Timer',
@@ -54,7 +55,36 @@
     previewSrc: '',
   });
   const runeState = reactive(runeRuntimeState());
-  const runeReferenceSrc = createRuneReferenceImage();
+
+  // 부스터 종료 알림: "남은시간" 패널은 항상 화면 위쪽 가운데에 나오므로, 영역을 따로 지정하지 않고 그 부분을 자동으로 본다
+  // (비디오 크기 대비 비율. 패널은 1366x768에서 가로 42~57%·세로 8~15%, UI 크기가 그대로인 1920x1080에서는 가로 44~55%.
+  //  넓게 볼수록 패널이 없을 때마다 전체를 다시 찾느라 무거워지므로 여유만 조금 둔다)
+  const BOOSTER_AREA_RATIO = { x0: 0.35, x1: 0.65, y0: 0, y1: 0.25 };
+  const boosterSearchArea = (vw, vh) => {
+    const x = Math.round(vw * BOOSTER_AREA_RATIO.x0);
+    const y = Math.round(vh * BOOSTER_AREA_RATIO.y0);
+    return { x, y, w: Math.round(vw * BOOSTER_AREA_RATIO.x1) - x, h: Math.round(vh * BOOSTER_AREA_RATIO.y1) - y };
+  };
+  const BOOSTER_MIN_MATCH = 0.8; // 패널 라벨 일치도 (같은 라벨끼리 0.96 이상, 다른 곳은 0.4 이하)
+  const booster = reactive({
+    enabled: false, // 처음에는 꺼진 상태로 시작
+    alertBeforeSec: 0, // 끝나기 N초 전에 알림 (음수면 끝나고 N초 후)
+    soundId: 'descending-chime', // BOOSTER_DEFAULT_SOUND_ID (소리 상수보다 먼저 만들어져서 값을 직접 적음)
+  });
+  // 부스터 감시 중 상태 (저장하지 않음)
+  const boosterRuntimeState = () => ({
+    status: undefined, // 'present' | 'hidden' | 'gone'
+    score: 0,
+    x: 0, // 찾은 라벨 위치 (비디오 원본 좌표)
+    y: 0,
+    endsAt: null, // 예상 종료 시각(ms). 패널이 가려져도 이 값으로 계속 센다
+    alertAt: null, // 알림 시각(ms) = 종료 시각 - 알림 오프셋
+    alerted: false, // 이번 부스터를 이미 알렸는지
+    absentStreak: 0,
+    previewSrc: '',
+  });
+  const boosterState = reactive(boosterRuntimeState());
+  let boosterTemplate = null; // { template, w, h } 라벨 기준 이미지
 
   // 검색 영역 모달이 다루는 대상: 'skill' = 스킬 검색 영역, 'rune' = 미니맵 영역
   const areaTarget = ref('skill');
@@ -124,6 +154,7 @@
   // 처음 등록할 때 쓰는 소리. 목록(sounds.json)에 없으면 기본 소리
   const SKILL_DEFAULT_SOUND_ID = 'payment-success';
   const RUNE_DEFAULT_SOUND_ID = 'power-up';
+  const BOOSTER_DEFAULT_SOUND_ID = 'descending-chime';
   const sounds = ref([]);
   const soundOptions = computed(() => [{ id: DEFAULT_SOUND_ID, name: '기본 소리' }, ...sounds.value]);
   const hasSound = (id) => id === DEFAULT_SOUND_ID || sounds.value.some((s) => s.id === id);
@@ -136,11 +167,15 @@
   const audioCache = new Map(); // src -> HTMLAudioElement
   const LEGACY_ICON_PATH = /^\/skill-timer-presets\//;
 
+  // 이 브라우저에 저장된 설정이 있는지. 처음 온 사용자에게는 화면 공유 전까지 알림 카드를 보여주지 않는다
+  const hasSavedConfig = ref(false);
+
   const persist = () => {
     try {
       const payload = {
         searchArea: searchArea.value,
         runeArea: runeArea.value,
+        booster: { enabled: booster.enabled, alertBeforeSec: booster.alertBeforeSec, soundId: booster.soundId },
         rune: { enabled: rune.enabled, mode: rune.mode, intervalSec: rune.intervalSec, soundId: rune.soundId },
         regions: regions.map((r) => ({
           name: r.name,
@@ -158,6 +193,7 @@
         })),
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      hasSavedConfig.value = true;
     } catch {
       // 저장 실패(용량 초과 등)는 무시
     }
@@ -235,12 +271,18 @@
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return;
+      hasSavedConfig.value = true;
       const payload = JSON.parse(raw);
       if (!payload) return;
 
       // 검색 영역과 스킬은 따로 저장된다 (영역을 다시 지정하는 중이면 영역 없이 스킬만 있을 수 있음)
       searchArea.value = payload.searchArea ?? null;
       runeArea.value = payload.runeArea ?? null;
+      if (payload.booster) {
+        booster.enabled = payload.booster.enabled ?? false;
+        booster.alertBeforeSec = payload.booster.alertBeforeSec ?? 0;
+        booster.soundId = resolveSoundId(payload.booster.soundId, BOOSTER_DEFAULT_SOUND_ID);
+      }
       if (payload.rune) {
         rune.enabled = payload.rune.enabled ?? true;
         rune.mode = payload.rune.mode === 'repeat' ? 'repeat' : 'once';
@@ -615,10 +657,55 @@
     }
   };
 
+  // 부스터 패널을 찾아 남은 시간을 읽는다. 패널이 가려져도(창, 이펙트) 마지막으로 읽은 시간으로 계속 세서 알린다
+  const checkBooster = (rgba, ba) => {
+    const now = Date.now();
+    const { template, w, h } = boosterTemplate;
+    const found = findIcon(rgba, ba, template, w, h, BOOSTER_MIN_MATCH, boosterState.x - ba.x, boosterState.y - ba.y);
+    // 같은 "남은시간" 라벨을 쓰는 다른 패널(예: "9분 46초")은 소수점이 없어 숫자를 읽지 못하므로, 라벨이 맞아도 부스터가 아닌 것으로 본다
+    const sec = found.score >= BOOSTER_MIN_MATCH ? readBoosterSeconds(rgba, ba.w, ba.h, found.lx - BOOSTER_LABEL.x, found.ly - BOOSTER_LABEL.y) : null;
+    boosterState.score = sec !== null ? found.score : 0;
+
+    if (sec !== null) {
+      boosterState.x = found.lx + ba.x;
+      boosterState.y = found.ly + ba.y;
+      boosterState.absentStreak = 0;
+      // 라벨만이 아니라 숫자까지 보이도록 패널 전체를 잘라서 보여준다 (앱이 무엇을 읽었는지 확인용)
+      boosterState.previewSrc = cropToDataUrl(captureCanvas, boosterState.x - BOOSTER_LABEL.x, boosterState.y - BOOSTER_LABEL.y, BOOSTER_PANEL_FULL.w, BOOSTER_PANEL_FULL.h);
+      // 사라졌던 패널이 다시 보이면 새 부스터 → 다음 알림 준비
+      if (boosterState.status === 'gone') boosterState.alerted = false;
+      const endsAt = now + sec * 1000;
+      // 남은 시간이 다시 늘어났다 = 부스터를 새로 씀
+      if (boosterState.endsAt && endsAt > boosterState.endsAt + 2000) boosterState.alerted = false;
+      boosterState.endsAt = endsAt;
+      boosterState.alertAt = endsAt - booster.alertBeforeSec * 1000;
+      boosterState.status = 'present';
+    } else if (boosterState.status === 'present' || boosterState.status === 'hidden') {
+      boosterState.absentStreak++;
+      // 남은 시간을 알면 끝날 때까지는 가려진 것으로 본다. 모르면 스킬처럼 연속으로 안 보여야 사라진 것으로 본다
+      const gone = boosterState.endsAt ? now >= boosterState.endsAt - END_SLACK_MS : boosterState.absentStreak >= GONE_TICKS;
+      if (gone) {
+        boosterState.status = 'gone';
+        boosterState.endsAt = null;
+        boosterState.previewSrc = '';
+      } else {
+        boosterState.status = 'hidden';
+      }
+    }
+
+    // 보이든 가려졌든 사라졌든 알림 시각이 되면 한 번 알린다 (음수 설정이면 끝난 뒤에 알림)
+    if (boosterState.alertAt && !boosterState.alerted && now >= boosterState.alertAt) {
+      boosterState.alerted = true;
+      boosterState.alertAt = null;
+      playAlertSound(booster.soundId);
+    }
+  };
+
   const tick = async () => {
     const watchSkills = !!searchArea.value && regions.length > 0;
     const watchRune = !!runeArea.value && rune.enabled;
-    if (ticking || !isSharing.value || (!watchSkills && !watchRune)) return;
+    const watchBooster = booster.enabled && !!boosterTemplate;
+    if (ticking || !isSharing.value || (!watchSkills && !watchRune && !watchBooster)) return;
     ticking = true;
     try {
       const video = captureVideo;
@@ -641,6 +728,11 @@
       if (watchRune) {
         const ra = runeArea.value;
         checkRune(captureCtx.getImageData(ra.x, ra.y, ra.w, ra.h).data, ra);
+      }
+
+      if (watchBooster) {
+        const ba = boosterSearchArea(video.videoWidth, video.videoHeight);
+        checkBooster(captureCtx.getImageData(ba.x, ba.y, ba.w, ba.h).data, ba);
       }
     } finally {
       ticking = false;
@@ -705,6 +797,7 @@
     // 감시가 끝났으니 화면 공유 중에만 의미 있는 값은 처음 상태로 되돌린다
     resetRegionRuntime();
     Object.assign(runeState, runeRuntimeState());
+    Object.assign(boosterState, boosterRuntimeState());
   };
 
   // 화면을 보고 얻은 값(현재 모습, 상태, 일치도, 남은 시간/횟수)만 처음 상태로 되돌린다. 저장되는 설정은 그대로
@@ -962,6 +1055,47 @@
     return 'secondary';
   });
 
+  const onBoosterEnabledChange = (enabled) => {
+    booster.enabled = enabled;
+    Object.assign(boosterState, boosterRuntimeState());
+    persist();
+  };
+
+  const onBoosterAlertChange = () => {
+    booster.alertBeforeSec ??= 0;
+    if (boosterState.endsAt && !boosterState.alerted) boosterState.alertAt = boosterState.endsAt - booster.alertBeforeSec * 1000;
+    persist();
+  };
+
+  const onBoosterSoundChange = () => {
+    persist();
+    playAlertSound(booster.soundId);
+  };
+
+  // 스킬 표와 같은 말과 색으로 상태를 보여준다
+  const boosterStatusLabel = computed(() => {
+    if (!booster.enabled) return '중지';
+    const remain = boosterState.endsAt ? `${formatSeconds(Math.max(0, Math.round((boosterState.endsAt - nowTick.value) / 1000)))} 남음` : '';
+    if (boosterState.status === 'present') return remain ? `인식 중 · ${remain}` : '인식 중';
+    if (boosterState.status === 'hidden') return remain ? `찾는 중 · 약 ${remain}` : `찾는 중 ${boosterState.absentStreak}/${GONE_TICKS}`;
+    return '대기 중';
+  });
+
+  const boosterStatusSeverity = computed(() => {
+    if (!booster.enabled) return 'secondary';
+    if (boosterState.status === 'present') return 'success';
+    if (boosterState.status === 'hidden') return 'warn';
+    if (boosterState.status === 'gone') return 'secondary';
+    return 'secondary';
+  });
+
+  const boosterHint = computed(() => {
+    const sec = booster.alertBeforeSec ?? 0;
+    if (sec > 0) return `끝나기 ${sec}초 전`;
+    if (sec < 0) return `끝나고 ${-sec}초 후`;
+    return '끝날 때';
+  });
+
   const runeHint = computed(() => (rune.mode === 'repeat' ? `떠 있는 동안 ${runeAlertOptions.find((o) => o.value === rune.intervalSec)?.label ?? ''}` : '나타날 때 한 번'));
 
   const removeRegion = (id) => {
@@ -1062,6 +1196,7 @@
     }
     // 룬 알림은 저장된 설정이 없을 때도 처음 기본 소리가 목록에 있는지 맞춰둔다
     rune.soundId = resolveSoundId(rune.soundId, RUNE_DEFAULT_SOUND_ID);
+    booster.soundId = resolveSoundId(booster.soundId, BOOSTER_DEFAULT_SOUND_ID);
   };
 
   const statusSeverity = (r) => {
@@ -1069,13 +1204,21 @@
     if (r.paused) return 'secondary';
     if (r.status === 'present') return 'success';
     if (r.status === 'hidden') return 'warn';
-    if (r.status === 'gone') return 'danger';
+    if (r.status === 'gone') return 'secondary';
     return 'secondary';
+  };
+
+  const loadBoosterTemplate = async () => {
+    try {
+      boosterTemplate = await loadImageTemplate(BOOSTER_LABEL.src);
+    } catch {
+      // 기준 이미지를 못 불러오면 부스터 종료 알림만 동작하지 않는다
+    }
   };
 
   onMounted(async () => {
     // 저장된 설정에 숫자 종류와 소리를 채우려면 기본 스킬·소리 목록이 먼저 있어야 한다
-    await Promise.all([loadPresets(), loadSounds()]);
+    await Promise.all([loadPresets(), loadSounds(), loadBoosterTemplate()]);
     await restore();
   });
 
@@ -1125,7 +1268,7 @@
         </div>
         <div v-for="r in regions" :key="r.id" class="skill-row border-surface-200 flex flex-wrap items-center gap-3 border-b py-3 last:border-0">
           <label class="flex cursor-pointer items-center gap-2">
-            <ToggleSwitch :modelValue="!r.paused" aria-label="감시" @update:modelValue="togglePause(r)" />
+            <ToggleSwitch class="alert-toggle" :modelValue="!r.paused" aria-label="감시" @update:modelValue="togglePause(r)" />
             <span class="text-xs font-medium" :class="r.paused ? 'text-muted-color' : 'text-color'">{{ r.paused ? '꺼짐' : '켜짐' }}</span>
           </label>
           <div class="flex items-center gap-1.5">
@@ -1221,7 +1364,7 @@
         <!-- 스킬 알림 표와 같은 grid 템플릿(skill-row)을 써서 두 표의 열을 맞춘다 -->
         <div class="skill-row text-muted-color border-surface-200 hidden border-b pb-2 text-xs font-medium">
           <span>감시</span>
-          <span>기준 / 현재</span>
+          <span>현재</span>
           <span>이름</span>
           <span>상태</span>
           <span>알림</span>
@@ -1229,15 +1372,11 @@
         </div>
         <div class="skill-row flex flex-wrap items-center gap-3 py-3">
           <label class="flex cursor-pointer items-center gap-2">
-            <ToggleSwitch :modelValue="rune.enabled" aria-label="룬 알림" @update:modelValue="onRuneEnabledChange" />
+            <ToggleSwitch class="alert-toggle" :modelValue="rune.enabled" aria-label="룬 알림" @update:modelValue="onRuneEnabledChange" />
             <span class="text-xs font-medium" :class="rune.enabled ? 'text-color' : 'text-muted-color'">{{ rune.enabled ? '켜짐' : '꺼짐' }}</span>
           </label>
-          <div class="flex items-center gap-1.5">
-            <img :src="runeReferenceSrc" alt="기준 룬" title="기준" class="border-surface-300 h-10 w-10 rounded border bg-black [image-rendering:pixelated]" />
-            <i class="pi pi-angle-right text-muted-color text-xs"></i>
-            <img v-if="runeState.previewSrc" :src="runeState.previewSrc" alt="현재 룬" title="현재" class="border-surface-300 h-10 w-10 rounded border bg-black [image-rendering:pixelated]" />
-            <div v-else class="border-surface-300 text-muted-color flex h-10 w-10 items-center justify-center rounded border border-dashed text-xs" title="룬을 찾으면 표시돼요">-</div>
-          </div>
+          <img v-if="runeState.previewSrc" :src="runeState.previewSrc" alt="현재 룬" title="현재" class="border-surface-300 h-10 w-10 rounded border bg-black [image-rendering:pixelated]" />
+          <div v-else class="border-surface-300 text-muted-color flex h-10 w-10 items-center justify-center rounded border border-dashed text-xs" title="룬을 찾으면 표시돼요">-</div>
 
           <span class="skill-name w-40 text-sm font-medium">룬</span>
 
@@ -1273,6 +1412,92 @@
               <div class="flex items-center gap-1">
                 <Select v-model="rune.soundId" :options="soundOptions" option-label="name" option-value="id" size="small" class="w-44" aria-label="룬 알림 소리" @change="onRuneSoundChange" />
                 <Button v-tooltip.top="'소리 미리 듣기'" icon="pi pi-volume-up" severity="secondary" text rounded size="small" aria-label="소리 미리 듣기" @click="playAlertSound(rune.soundId)" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 부스터 종료 알림은 영역을 지정하지 않으므로(화면 위쪽 가운데를 자동으로 봄) 저장된 설정이 있거나 화면 공유 중이면 보여준다 -->
+  <div class="mt-8 flex" v-if="hasSavedConfig || isSharing">
+    <div class="card flex w-full flex-col gap-4">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="text-xl font-semibold">부스터 종료 알림</div>
+      </div>
+      <div class="flex flex-col">
+        <!-- 스킬 알림 표와 같은 grid 템플릿(skill-row)을 써서 표의 열을 맞춘다 -->
+        <div class="skill-row text-muted-color border-surface-200 hidden border-b pb-2 text-xs font-medium">
+          <span>감시</span>
+          <span>현재</span>
+          <span>이름</span>
+          <span>상태</span>
+          <span>알림</span>
+          <span></span>
+        </div>
+        <div class="skill-row flex flex-wrap items-center gap-3 py-3">
+          <label class="flex cursor-pointer items-center gap-2">
+            <ToggleSwitch class="alert-toggle" :modelValue="booster.enabled" aria-label="부스터 종료 알림" @update:modelValue="onBoosterEnabledChange" />
+            <span class="text-xs font-medium" :class="booster.enabled ? 'text-color' : 'text-muted-color'">{{ booster.enabled ? '켜짐' : '꺼짐' }}</span>
+          </label>
+          <!-- 부스터는 기준 이미지가 항상 같아 의미가 없으므로, 실제로 찾아서 읽은 패널만 칸 폭(7rem)에 맞춰 보여준다 -->
+          <img v-if="boosterState.previewSrc" :src="boosterState.previewSrc" alt="현재 부스터 패널" title="현재" class="border-surface-300 h-10 w-28 rounded border bg-black object-contain" />
+          <div v-else class="border-surface-300 text-muted-color flex h-10 w-28 items-center justify-center rounded border border-dashed text-xs" title="부스터를 찾으면 표시돼요">-</div>
+
+          <span class="skill-name w-40 text-sm font-medium">부스터</span>
+
+          <div class="flex flex-col items-start gap-1">
+            <Tag :value="boosterStatusLabel" :severity="boosterStatusSeverity" />
+            <span class="text-muted-color text-xs">일치 {{ Math.max(0, Math.round(boosterState.score * 100)) }}%</span>
+          </div>
+
+          <div class="flex flex-col items-start gap-1">
+            <div class="flex items-center gap-2">
+              <span class="text-muted-color skill-mlabel text-xs">알림</span>
+              <InputNumber
+                v-model="booster.alertBeforeSec"
+                :min="-5"
+                :max="10"
+                showButtons
+                buttonLayout="horizontal"
+                size="small"
+                :inputStyle="{ width: '3rem', textAlign: 'center' }"
+                @update:modelValue="onBoosterAlertChange"
+              />
+              <span class="text-muted-color text-xs">초 전</span>
+            </div>
+            <span class="text-muted-color text-xs">{{ boosterHint }} 알림</span>
+          </div>
+
+          <div class="skill-actions ml-auto flex items-center justify-end gap-1">
+            <Button
+              icon="pi pi-sliders-h"
+              :severity="openDetails.has('booster') ? 'primary' : 'secondary'"
+              text
+              rounded
+              v-tooltip.top="'상세 설정'"
+              aria-label="상세 설정"
+              :aria-expanded="openDetails.has('booster')"
+              @click="toggleDetail('booster')"
+            />
+          </div>
+
+          <div v-if="openDetails.has('booster')" class="skill-detail bg-surface-50 dark:bg-surface-800 flex w-full flex-wrap items-start gap-x-10 gap-y-4 rounded-lg px-4 py-3">
+            <div class="flex flex-col gap-1.5">
+              <span class="text-muted-color text-xs font-medium">소리</span>
+              <div class="flex items-center gap-1">
+                <Select
+                  v-model="booster.soundId"
+                  :options="soundOptions"
+                  option-label="name"
+                  option-value="id"
+                  size="small"
+                  class="w-44"
+                  aria-label="부스터 종료 알림 소리"
+                  @change="onBoosterSoundChange"
+                />
+                <Button v-tooltip.top="'소리 미리 듣기'" icon="pi pi-volume-up" severity="secondary" text rounded size="small" aria-label="소리 미리 듣기" @click="playAlertSound(booster.soundId)" />
               </div>
             </div>
           </div>
@@ -1385,6 +1610,15 @@
       grid-column: 1 / -1;
       margin-top: 0.75rem;
     }
+  }
+
+  /* 기본 글자 크기가 14px라 PrimeVue 토글 크기(rem)가 반 픽셀(높이 21px, 여백 3.5px)로 계산돼서, 토글이 놓인 위치의 소수점에 따라
+     원이 1px씩 위아래로 다르게 그려진다. 크기를 정수 픽셀로 고정해 어느 카드에서든 원이 가운데에 오게 한다 */
+  .alert-toggle {
+    --p-toggleswitch-width: 36px;
+    --p-toggleswitch-height: 20px;
+    --p-toggleswitch-gap: 3px;
+    --p-toggleswitch-handle-size: 14px;
   }
 
   /* 영역만 지정하고 스킬이 없을 때 다음에 누를 "스킬 선택" 버튼을 숨 쉬듯 강조 */

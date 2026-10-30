@@ -11,12 +11,17 @@
   },
   {
     "id": "coin",
-    "name": "coin",
+    "name": "Coin",
     "file": "coin.m4a"
   },
   {
     "id": "netflix",
     "name": "Netflix",
     "file": "netflix.mp3"
+  },
+  {
+    "id": "descending-chime",
+    "name": "Descending Chime",
+    "file": "descending-chime.m4a"
   }
 ]

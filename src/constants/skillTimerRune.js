@@ -18,23 +18,6 @@ const PATTERN = [
 
 export const RUNE_SIZE = PATTERN.length;
 
-// 표에 "기준" 이미지로 보여줄 룬 모양 (패턴을 그대로 그린다)
-const REFERENCE_COLORS = { P: '#dd66ff', K: '#000000', W: '#c4c4c4' };
-export const createRuneReferenceImage = () => {
-  const c = document.createElement('canvas');
-  c.width = RUNE_SIZE;
-  c.height = RUNE_SIZE;
-  const ctx = c.getContext('2d');
-  PATTERN.forEach((row, y) => {
-    [...row].forEach((ch, x) => {
-      if (!REFERENCE_COLORS[ch]) return;
-      ctx.fillStyle = REFERENCE_COLORS[ch];
-      ctx.fillRect(x, y, 1, 1);
-    });
-  });
-  return c.toDataURL('image/png');
-};
-
 const points = { P: [], K: [], W: [] };
 PATTERN.forEach((row, y) => {
   [...row].forEach((ch, x) => {
