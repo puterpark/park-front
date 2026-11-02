@@ -26,12 +26,16 @@ PATTERN.forEach((row, y) => {
 });
 
 const luma = (r, g, b) => 0.299 * r + 0.587 * g + 0.114 * b;
+
 // 원본 보라색(#dd66ff)의 밝기는 약 155, 검은 테두리는 0, 바깥 테두리는 약 190~230
 const isPurple = (r, g, b) => {
   const l = luma(r, g, b);
   return l > 95 && l < 225;
 };
-const isPurpleHue = (r, g, b) => b - g > 25 && r - g > 15;
+
+// 보라색은 파랑이 빨강과 비슷하거나 더 높다(#dd66ff: r=221,b=255). 다른 유저 표시(빨강/분홍)는
+// 파랑이 초록보다 높아 보일 때도 있지만 빨강이 파랑보다 확실히 크다 → r-b로 걸러낸다.
+const isPurpleHue = (r, g, b) => b - g > 25 && r - g > 15 && r - b < 20;
 const isDark = (r, g, b) => luma(r, g, b) < 90;
 const isBright = (r, g, b) => luma(r, g, b) > 130;
 
