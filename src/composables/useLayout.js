@@ -1,4 +1,4 @@
-import { computed, reactive } from 'vue';
+import { computed, reactive, watch } from 'vue';
 import { useLayoutStore } from '@/stores/useLayoutStore';
 
 const layoutConfig = reactive({
@@ -17,7 +17,28 @@ const layoutState = reactive({
   menuHoverActive: false,
   activeMenuItem: null,
   activePath: null,
+  mobileMenuActive: false,
 });
+
+let lockedScrollY = 0;
+
+watch(
+  () => layoutState.mobileMenuActive,
+  (active) => {
+    if (active) {
+      lockedScrollY = window.scrollY;
+      const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth;
+      document.body.classList.add('blocked-scroll');
+      document.body.style.top = `-${lockedScrollY}px`;
+      document.body.style.paddingRight = scrollBarWidth > 0 ? `${scrollBarWidth}px` : '';
+    } else {
+      document.body.classList.remove('blocked-scroll');
+      document.body.style.top = '';
+      document.body.style.paddingRight = '';
+      window.scrollTo(0, lockedScrollY);
+    }
+  }
+);
 
 export function useLayout() {
   const layoutStore = useLayoutStore();
