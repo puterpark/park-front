@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import AdminLayout from '@/layout/admin/AdminLayout.vue';
 import AppLayout from '@/layout/app/AppLayout.vue';
 import { useAdminStore } from '@/stores/useAdminStore';
+import { isMobileDevice } from '@/utils/commonUtils';
 import Empty from '@/views/Empty.vue';
 import NotFound from '@/views/NotFound.vue';
 
@@ -80,6 +81,7 @@ const appChildren = [
     path: '/tools/skill-timer',
     name: 'skillTimer',
     component: () => import('@/views/tools/SkillTimer.vue'),
+    meta: { desktopOnly: true },
   },
 ];
 
@@ -136,6 +138,15 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   if (to.name === 'notFound') {
     return next();
+  }
+
+  if (to.meta?.desktopOnly && isMobileDevice()) {
+    return next({
+      name: 'notFound',
+      params: { pathMatch: to.path.substring(1).split('/') },
+      query: to.query,
+      hash: to.hash,
+    });
   }
 
   const adminStore = useAdminStore();

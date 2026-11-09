@@ -2,7 +2,7 @@
   import { onMounted, ref } from 'vue';
   import { getIpApi } from '@/api/ip';
   import { useAppToast } from '@/composables/useAppToast';
-  import { copyText } from '@/utils/commonUtils';
+  import { copyText, isMobileDevice } from '@/utils/commonUtils';
   import AppMenuItem from './AppMenuItem.vue';
 
   const toast = useAppToast();
@@ -90,6 +90,7 @@
           label: 'SkillTimer',
           icon: 'pi pi-fw pi-bell',
           to: '/tools/skill-timer',
+          visible: !isMobileDevice(),
         },
       ],
     },
