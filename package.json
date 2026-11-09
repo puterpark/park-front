@@ -31,9 +31,7 @@
     "tailwindcss-primeui": "^0.6.0",
     "temporal-polyfill": "^0.3.0",
     "vue": "^3.4.34",
-    "vue-google-adsense": "^2.0.0",
-    "vue-router": "^4.4.0",
-    "vue-scriptx": "^0.2.7"
+    "vue-router": "^4.4.0"
   },
   "devDependencies": {
     "@primevue/auto-import-resolver": "^4.3.1",

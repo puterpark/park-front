@@ -1,6 +1,4 @@
 import { createApp } from 'vue';
-import Ads from 'vue-google-adsense';
-import ScriptX from 'vue-scriptx';
 import PrimeVue from 'primevue/config';
 import ConfirmationService from 'primevue/confirmationservice';
 import ToastService from 'primevue/toastservice';
@@ -44,10 +42,6 @@ app.use(PrimeVue, {
 });
 app.use(ToastService);
 app.use(ConfirmationService);
-
-// Google AdSense
-app.use(ScriptX);
-app.use(Ads.Adsense);
 
 // unhead
 const head = createHead();
