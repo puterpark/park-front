@@ -23,5 +23,15 @@
     "id": "descending-chime",
     "name": "Descending Chime",
     "file": "descending-chime.m4a"
+  },
+  {
+    "id": "buddybuddy-message",
+    "name": "Buddybuddy Message",
+    "file": "buddybuddy-message.m4a"
+  },
+  {
+    "id": "buddybuddy-logout",
+    "name": "Buddybuddy Logout",
+    "file": "buddybuddy-logout.m4a"
   }
 ]
