@@ -35,8 +35,15 @@
   const runeArea = ref(null);
   // 알림 방식과 반복 간격을 한 칸에서 고른다 (0 = 한 번만). 스킬 표처럼 알림 칸에 컨트롤 하나만 두려고 합쳤다
   const RUNE_REPEAT_SECONDS = [5, 10, 15, 20, 30, 45, 60];
-  const runeAlertOptions = [{ value: 0, label: '한 번만' }, ...RUNE_REPEAT_SECONDS.map((sec) => ({ value: sec, label: `${sec}초마다` }))];
-  const nearestRepeatSeconds = (sec) => RUNE_REPEAT_SECONDS.reduce((best, v) => (Math.abs(v - sec) < Math.abs(best - sec) ? v : best));
+  const runeAlertOptions = [
+    { value: 0, label: '한 번만' },
+    ...RUNE_REPEAT_SECONDS.map((sec) => ({
+      value: sec,
+      label: `${sec}초마다`,
+    })),
+  ];
+  const nearestRepeatSeconds = (sec) =>
+    RUNE_REPEAT_SECONDS.reduce((best, v) => (Math.abs(v - sec) < Math.abs(best - sec) ? v : best));
   const rune = reactive({
     enabled: true,
     mode: 'once', // 'once' = 나타날 때 한 번, 'repeat' = 떠 있는 동안 intervalSec마다
@@ -69,7 +76,7 @@
   const booster = reactive({
     enabled: false, // 처음에는 꺼진 상태로 시작
     alertBeforeSec: 0, // 끝나기 N초 전에 알림 (음수면 끝나고 N초 후)
-    soundId: 'descending-chime', // BOOSTER_DEFAULT_SOUND_ID (소리 상수보다 먼저 만들어져서 값을 직접 적음)
+    soundId: 'buddybuddy-logout', // BOOSTER_DEFAULT_SOUND_ID (소리 상수보다 먼저 만들어져서 값을 직접 적음)
   });
   // 부스터 감시 중 상태 (저장하지 않음)
   const boosterRuntimeState = () => ({
@@ -91,8 +98,11 @@
   const activeArea = computed({
     get: () => (areaTarget.value === 'rune' ? runeArea.value : searchArea.value),
     set: (v) => {
-      if (areaTarget.value === 'rune') runeArea.value = v;
-      else searchArea.value = v;
+      if (areaTarget.value === 'rune') {
+        runeArea.value = v;
+      } else {
+        searchArea.value = v;
+      }
     },
   });
 
@@ -154,13 +164,15 @@
   // 처음 등록할 때 쓰는 소리. 목록(sounds.json)에 없으면 기본 소리
   const SKILL_DEFAULT_SOUND_ID = 'payment-success';
   const RUNE_DEFAULT_SOUND_ID = 'power-up';
-  const BOOSTER_DEFAULT_SOUND_ID = 'descending-chime';
+  const BOOSTER_DEFAULT_SOUND_ID = 'buddybuddy-logout';
   const sounds = ref([]);
   const soundOptions = computed(() => [{ id: DEFAULT_SOUND_ID, name: '기본 소리' }, ...sounds.value]);
   const hasSound = (id) => id === DEFAULT_SOUND_ID || sounds.value.some((s) => s.id === id);
   // 저장된 소리가 없거나 목록에서 빠졌으면 처음 기본값, 그것도 없으면 기본 소리
   const resolveSoundId = (id, fallback) => {
-    if (hasSound(id)) return id;
+    if (hasSound(id)) {
+      return id;
+    }
     return hasSound(fallback) ? fallback : DEFAULT_SOUND_ID;
   };
   // 여러 스킬이 동시에 알려도 서로 끊지 않도록 소리 파일마다 따로 재생
@@ -231,7 +243,9 @@
     const { data, width, height } = imgData;
     const opaque = [];
     for (let p = 0; p < width * height; p++) {
-      if (data[p * 4 + 3] >= 128) opaque.push(p);
+      if (data[p * 4 + 3] >= 128) {
+        opaque.push(p);
+      }
     }
     const inner = opaque.filter((p) => {
       const x = p % width;
@@ -270,10 +284,14 @@
   const restore = async () => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
+      if (!raw) {
+        return;
+      }
       hasSavedConfig.value = true;
       const payload = JSON.parse(raw);
-      if (!payload) return;
+      if (!payload) {
+        return;
+      }
 
       // 검색 영역과 스킬은 따로 저장된다 (영역을 다시 지정하는 중이면 영역 없이 스킬만 있을 수 있음)
       searchArea.value = payload.searchArea ?? null;
@@ -289,7 +307,9 @@
         rune.intervalSec = nearestRepeatSeconds(payload.rune.intervalSec ?? 10);
         rune.soundId = resolveSoundId(payload.rune.soundId, RUNE_DEFAULT_SOUND_ID);
       }
-      if (!Array.isArray(payload.regions) || payload.regions.length === 0) return;
+      if (!Array.isArray(payload.regions) || payload.regions.length === 0) {
+        return;
+      }
 
       for (const saved of payload.regions) {
         // 예전에 로컬(public)에 있던 스킬 경로로 저장된 설정은 CDN 주소로 바꿔서 불러온다
@@ -302,7 +322,9 @@
           // 아래에서 loadFailed로 표시
         }
         const id = regionSeq++;
-        if (loaded) templateStore.set(id, loaded.template);
+        if (loaded) {
+          templateStore.set(id, loaded.template);
+        }
         // 숫자 종류가 저장되기 전의 설정은 기본 스킬 목록에서 같은 이미지를 찾아 채운다
         const preset = presets.value.find((p) => iconSrc.endsWith(`/${p.file}`));
         regions.push({
@@ -330,10 +352,17 @@
       }
 
       persist();
-      const next = searchArea.value ? '화면 공유를 시작하면 바로 감시해요.' : '화면 공유 후 검색 영역을 지정하면 감시를 시작해요.';
+      const next = searchArea.value
+        ? '화면 공유를 시작하면 바로 감시해요.'
+        : '화면 공유 후 검색 영역을 지정하면 감시를 시작해요.';
       toast.info('저장된 설정을 불러왔어요', `${next}`);
       const failed = regions.filter((r) => r.loadFailed).length;
-      if (failed) toast.warn('스킬 이미지를 불러오지 못했어요', `${failed}개는 감시하지 않아요. 설정은 남겨뒀으니 새로고침하면 다시 시도해요.`);
+      if (failed) {
+        toast.warn(
+          '스킬 이미지를 불러오지 못했어요',
+          `${failed}개는 감시하지 않아요. 설정은 남겨뒀으니 새로고침하면 다시 시도해요.`
+        );
+      }
     } catch {
       // 복원 실패는 무시
     }
@@ -342,8 +371,12 @@
   // 브라우저 자동재생 정책 때문에, 사용자가 버튼을 누른 순간에 오디오를 미리 깨워둔다
   const ensureAudio = () => {
     try {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') audioCtx.resume();
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
     } catch {
       audioCtx = null;
     }
@@ -351,7 +384,9 @@
 
   const beep = (times = 3) => {
     ensureAudio();
-    if (!audioCtx) return;
+    if (!audioCtx) {
+      return;
+    }
     const now = audioCtx.currentTime;
     for (let i = 0; i < times; i++) {
       const osc = audioCtx.createOscillator();
@@ -390,7 +425,9 @@
 
   // 한 번 시전에 한 번만 알린다 (소리만)
   const alertRegion = (region) => {
-    if (region.alerted) return;
+    if (region.alerted) {
+      return;
+    }
     region.alerted = true;
     region.alertAt = null;
     playAlertSound(region.soundId);
@@ -398,7 +435,9 @@
 
   // 시간형은 아이콘이 보이든 가려졌든 사라졌든 설정한 시각이 되면 알린다
   const checkTimedAlert = (region) => {
-    if (region.counterType === 'time' && region.alertAt && !region.alerted && Date.now() >= region.alertAt) alertRegion(region);
+    if (region.counterType === 'time' && region.alertAt && !region.alerted && Date.now() >= region.alertAt) {
+      alertRegion(region);
+    }
   };
 
   const updateScale = () => {
@@ -423,7 +462,9 @@
     let total = 0;
     let channels = 0;
     for (let c = 0; c < 3; c++) {
-      if (variance[c] <= 1) continue;
+      if (variance[c] <= 1) {
+        continue;
+      }
       const tc = centered[c];
       let sI = 0;
       let sI2 = 0;
@@ -436,7 +477,9 @@
       }
       const vI = sI2 - (sI * sI) / n;
       channels++;
-      if (vI > 1) total += sIT / Math.sqrt(vI * variance[c]);
+      if (vI > 1) {
+        total += sIT / Math.sqrt(vI * variance[c]);
+      }
     }
     return channels ? total / channels : 0;
   };
@@ -449,16 +492,22 @@
     const inArea = (lx, ly) => lx >= 0 && ly >= 0 && lx + tw <= sa.w && ly + th <= sa.h;
     if (inArea(lastLx, lastLy)) {
       const atLast = colorNcc(rgba, sa.w, lastLx, lastLy, tpl.full);
-      if (atLast >= minMatch && innerMatches(lastLx, lastLy)) return { score: atLast, lx: lastLx, ly: lastLy };
+      if (atLast >= minMatch && innerMatches(lastLx, lastLy)) {
+        return { score: atLast, lx: lastLx, ly: lastLy };
+      }
     }
 
     const quickMin = minMatch - 0.2;
     let best = { score: 0, lx: lastLx, ly: lastLy };
     for (let ly = 0; ly <= sa.h - th; ly++) {
       for (let lx = 0; lx <= sa.w - tw; lx++) {
-        if (colorNcc(rgba, sa.w, lx, ly, tpl.quick) < quickMin) continue;
+        if (colorNcc(rgba, sa.w, lx, ly, tpl.quick) < quickMin) {
+          continue;
+        }
         const score = colorNcc(rgba, sa.w, lx, ly, tpl.full);
-        if (score > best.score && innerMatches(lx, ly)) best = { score, lx, ly };
+        if (score > best.score && innerMatches(lx, ly)) {
+          best = { score, lx, ly };
+        }
       }
     }
     return best;
@@ -473,7 +522,11 @@
       return isInk(rgba[i], rgba[i + 1], rgba[i + 2]);
     };
     const colHasInk = (x) => {
-      for (let y = box.y0; y <= box.y1; y++) if (ink(x, y)) return true;
+      for (let y = box.y0; y <= box.y1; y++) {
+        if (ink(x, y)) {
+          return true;
+        }
+      }
       return false;
     };
 
@@ -499,16 +552,24 @@
       let bestDist = Infinity;
       for (const [ch, list] of Object.entries(glyphs)) {
         for (const t of list) {
-          if (t.length !== glyph.length) continue;
+          if (t.length !== glyph.length) {
+            continue;
+          }
           let d = 0;
-          for (let i = 0; i < t.length; i++) if (t[i] !== glyph[i]) d++;
+          for (let i = 0; i < t.length; i++) {
+            if (t[i] !== glyph[i]) {
+              d++;
+            }
+          }
           if (d < bestDist) {
             bestDist = d;
             best = ch;
           }
         }
       }
-      if (bestDist > GLYPH_TOLERANCE) return null;
+      if (bestDist > GLYPH_TOLERANCE) {
+        return null;
+      }
       text += best;
       x = end;
     }
@@ -517,16 +578,24 @@
 
   // 시간형은 남은 초, 횟수형은 남은 횟수를 돌려준다. 못 읽으면 null
   const readCounter = (rgba, sa, lx, ly, region) => {
-    if (!region.counterType || region.tplW !== 32 || region.tplH !== 32) return null;
+    if (!region.counterType || region.tplW !== 32 || region.tplH !== 32) {
+      return null;
+    }
     const text = readDigits(rgba, sa.w, lx, ly, region.counterType);
-    if (text === null) return null;
+    if (text === null) {
+      return null;
+    }
     if (region.counterType === 'time') {
       const mmss = text.match(/^(\d{1,2}):(\d{2})$/);
-      if (mmss) return Number(mmss[1]) * 60 + Number(mmss[2]);
+      if (mmss) {
+        return Number(mmss[1]) * 60 + Number(mmss[2]);
+      }
       return /^\d{1,3}$/.test(text) ? Number(text) : null;
     }
     // 횟수가 0이 되면 숫자만 사라지고 아이콘은 남는다
-    if (text === '') return 0;
+    if (text === '') {
+      return 0;
+    }
     return /^\d{1,2}$/.test(text) ? Number(text) : null;
   };
 
@@ -535,15 +604,21 @@
     region.status = 'gone';
     region.endsAt = null;
     region.hiddenSince = null;
-    if (silent) return;
+    if (silent) {
+      return;
+    }
     // 시간형은 알림 시각에 맞춰 따로 알린다 (음수 설정이면 사라진 뒤에 알림). 시각을 모르면(숫자를 못 읽음) 지금 알림
-    if (region.counterType === 'time' && region.alertAt) return;
+    if (region.counterType === 'time' && region.alertAt) {
+      return;
+    }
     alertRegion(region);
   };
 
   const matchRegion = (region, rgba, sa) => {
     const tpl = templateStore.get(region.id);
-    if (!tpl) return;
+    if (!tpl) {
+      return;
+    }
     const tw = region.tplW;
     const th = region.tplH;
     const minMatch = region.minMatchPercent / 100;
@@ -560,13 +635,17 @@
       region.previewSrc = cropToDataUrl(captureCanvas, region.lastX, region.lastY, tw, th);
 
       // 사라졌던 스킬이 다시 보이면 새로 시전한 것 → 다음 알림 준비
-      if (region.status === 'gone') region.alerted = false;
+      if (region.status === 'gone') {
+        region.alerted = false;
+      }
 
       const value = readCounter(rgba, sa, found.lx, found.ly, region);
       if (region.counterType === 'time' && value !== null) {
         const endsAt = now + value * 1000;
         // 남은 시간이 다시 늘어났다 = 재시전
-        if (region.endsAt && endsAt > region.endsAt + 2000) region.alerted = false;
+        if (region.endsAt && endsAt > region.endsAt + 2000) {
+          region.alerted = false;
+        }
         region.endsAt = endsAt;
         region.alertAt = endsAt - region.alertBeforeSec * 1000;
       }
@@ -585,11 +664,17 @@
         }
         region.zeroStreak = 0;
         // 횟수를 다 쓴 아이콘이 그대로 떠 있는 동안은 '사라짐' 상태 유지
-        if (value === 0 && region.count === 0 && region.status === 'gone') return;
+        if (value === 0 && region.count === 0 && region.status === 'gone') {
+          return;
+        }
         // 남은 횟수가 다시 늘어났다 = 재시전
-        if (region.count !== null && value > region.count) region.alerted = false;
+        if (region.count !== null && value > region.count) {
+          region.alerted = false;
+        }
         region.count = value;
-        if (region.alertAtCount > 0 && value <= region.alertAtCount) alertRegion(region);
+        if (region.alertAtCount > 0 && value <= region.alertAtCount) {
+          alertRegion(region);
+        }
       }
 
       region.status = 'present';
@@ -598,7 +683,9 @@
 
     region.absentStreak += 1;
     region.previewSrc = cropToDataUrl(captureCanvas, region.lastX, region.lastY, tw, th);
-    if (region.status !== 'present' && region.status !== 'hidden') return;
+    if (region.status !== 'present' && region.status !== 'hidden') {
+      return;
+    }
     region.hiddenSince ??= now;
 
     // 숫자로 남은 양을 알면, 남아 있는 동안 안 보이는 건 인벤토리 창/이펙트에 가려진 것으로 본다
@@ -609,8 +696,11 @@
       // 마지막 1회 이하면 다 쓰고 사라진 것으로 보고 알린다
       if (region.count > 1) {
         // 2회 이상 남은 채로 안 보이면 가려진 것으로 보고 기다리다가, 오래 안 보이면 알림 없이 '대기 중'으로
-        if (now - region.hiddenSince >= HIDDEN_FALLBACK_MS) markGone(region, { silent: true });
-        else region.status = 'hidden';
+        if (now - region.hiddenSince >= HIDDEN_FALLBACK_MS) {
+          markGone(region, { silent: true });
+        } else {
+          region.status = 'hidden';
+        }
         return;
       }
       gone = region.absentStreak >= 2;
@@ -618,8 +708,11 @@
       gone = region.absentStreak >= GONE_TICKS;
     }
 
-    if (gone) markGone(region);
-    else region.status = 'hidden';
+    if (gone) {
+      markGone(region);
+    } else {
+      region.status = 'hidden';
+    }
   };
 
   // 마지막으로 찾은 위치에서 이만큼(px, 비디오 원본 기준)보다 많이 떨어진 곳에 보이면 다른 룬으로 본다
@@ -634,7 +727,12 @@
       const x = found.x + ra.x;
       const y = found.y + ra.y;
       // 맵을 옮기면 로딩이 짧아 "사라짐"(연속 GONE_TICKS번)까지 안 가므로, 다른 위치에 보이면 새 룬으로 보고 다시 알린다
-      if (runeState.alerted && (Math.abs(x - runeState.x) > RUNE_MOVE_PX || Math.abs(y - runeState.y) > RUNE_MOVE_PX)) runeState.alerted = false;
+      if (
+        runeState.alerted &&
+        (Math.abs(x - runeState.x) > RUNE_MOVE_PX || Math.abs(y - runeState.y) > RUNE_MOVE_PX)
+      ) {
+        runeState.alerted = false;
+      }
       runeState.status = 'present';
       runeState.absentStreak = 0;
       runeState.x = x;
@@ -663,7 +761,10 @@
     const { template, w, h } = boosterTemplate;
     const found = findIcon(rgba, ba, template, w, h, BOOSTER_MIN_MATCH, boosterState.x - ba.x, boosterState.y - ba.y);
     // 같은 "남은시간" 라벨을 쓰는 다른 패널(예: "9분 46초")은 소수점이 없어 숫자를 읽지 못하므로, 라벨이 맞아도 부스터가 아닌 것으로 본다
-    const sec = found.score >= BOOSTER_MIN_MATCH ? readBoosterSeconds(rgba, ba.w, ba.h, found.lx - BOOSTER_LABEL.x, found.ly - BOOSTER_LABEL.y) : null;
+    const sec =
+      found.score >= BOOSTER_MIN_MATCH
+        ? readBoosterSeconds(rgba, ba.w, ba.h, found.lx - BOOSTER_LABEL.x, found.ly - BOOSTER_LABEL.y)
+        : null;
     boosterState.score = sec !== null ? found.score : 0;
 
     if (sec !== null) {
@@ -671,19 +772,31 @@
       boosterState.y = found.ly + ba.y;
       boosterState.absentStreak = 0;
       // 라벨만이 아니라 숫자까지 보이도록 패널 전체를 잘라서 보여준다 (앱이 무엇을 읽었는지 확인용)
-      boosterState.previewSrc = cropToDataUrl(captureCanvas, boosterState.x - BOOSTER_LABEL.x, boosterState.y - BOOSTER_LABEL.y, BOOSTER_PANEL_FULL.w, BOOSTER_PANEL_FULL.h);
+      boosterState.previewSrc = cropToDataUrl(
+        captureCanvas,
+        boosterState.x - BOOSTER_LABEL.x,
+        boosterState.y - BOOSTER_LABEL.y,
+        BOOSTER_PANEL_FULL.w,
+        BOOSTER_PANEL_FULL.h
+      );
       // 사라졌던 패널이 다시 보이면 새 부스터 → 다음 알림 준비
-      if (boosterState.status === 'gone') boosterState.alerted = false;
+      if (boosterState.status === 'gone') {
+        boosterState.alerted = false;
+      }
       const endsAt = now + sec * 1000;
       // 남은 시간이 다시 늘어났다 = 부스터를 새로 씀
-      if (boosterState.endsAt && endsAt > boosterState.endsAt + 2000) boosterState.alerted = false;
+      if (boosterState.endsAt && endsAt > boosterState.endsAt + 2000) {
+        boosterState.alerted = false;
+      }
       boosterState.endsAt = endsAt;
       boosterState.alertAt = endsAt - booster.alertBeforeSec * 1000;
       boosterState.status = 'present';
     } else if (boosterState.status === 'present' || boosterState.status === 'hidden') {
       boosterState.absentStreak++;
       // 남은 시간을 알면 끝날 때까지는 가려진 것으로 본다. 모르면 스킬처럼 연속으로 안 보여야 사라진 것으로 본다
-      const gone = boosterState.endsAt ? now >= boosterState.endsAt - END_SLACK_MS : boosterState.absentStreak >= GONE_TICKS;
+      const gone = boosterState.endsAt
+        ? now >= boosterState.endsAt - END_SLACK_MS
+        : boosterState.absentStreak >= GONE_TICKS;
       if (gone) {
         boosterState.status = 'gone';
         boosterState.endsAt = null;
@@ -705,11 +818,15 @@
     const watchSkills = !!searchArea.value && regions.length > 0;
     const watchRune = !!runeArea.value && rune.enabled;
     const watchBooster = booster.enabled && !!boosterTemplate;
-    if (ticking || !isSharing.value || (!watchSkills && !watchRune && !watchBooster)) return;
+    if (ticking || !isSharing.value || (!watchSkills && !watchRune && !watchBooster)) {
+      return;
+    }
     ticking = true;
     try {
       const video = captureVideo;
-      if (!video.videoWidth) return;
+      if (!video.videoWidth) {
+        return;
+      }
       nowTick.value = Date.now();
       captureCanvas.width = video.videoWidth;
       captureCanvas.height = video.videoHeight;
@@ -719,7 +836,9 @@
         const sa = searchArea.value;
         const rgba = captureCtx.getImageData(sa.x, sa.y, sa.w, sa.h).data;
         for (const region of regions) {
-          if (region.paused) continue;
+          if (region.paused) {
+            continue;
+          }
           matchRegion(region, rgba, sa);
           checkTimedAlert(region);
         }
@@ -741,7 +860,9 @@
 
   const startShare = async () => {
     // 공유할 창을 고르는 동안 버튼을 또 누르면 공유와 감시가 두 개씩 생긴다
-    if (isStarting.value || isSharing.value) return;
+    if (isStarting.value || isSharing.value) {
+      return;
+    }
     if (typeof navigator.mediaDevices?.getDisplayMedia !== 'function') {
       toast.error('지원하지 않는 브라우저', '화면 공유를 지원하지 않는 브라우저예요.');
       return;
@@ -772,7 +893,9 @@
       pollTimer = setInterval(tick, 1200);
 
       // 처음이라 검색 영역이 없으면 바로 지정하도록 연다
-      if (!searchArea.value && !runeArea.value) openAreaDialog('skill');
+      if (!searchArea.value && !runeArea.value) {
+        openAreaDialog('skill');
+      }
     } catch {
       // 권한은 받았지만 영상 재생 등에서 실패: 잡아둔 화면 공유를 놓아준다
       stopShare();
@@ -813,14 +936,18 @@
   };
 
   const onSelectStart = (e) => {
-    if (!isSharing.value || activeArea.value) return;
+    if (!isSharing.value || activeArea.value) {
+      return;
+    }
     dragging.value = true;
     dragOrigin.value = getRelPoint(e);
     selectRect.value = { x: dragOrigin.value.x, y: dragOrigin.value.y, w: 0, h: 0 };
   };
 
   const onSelectMove = (e) => {
-    if (!dragging.value) return;
+    if (!dragging.value) {
+      return;
+    }
     const p = getRelPoint(e);
     selectRect.value = {
       x: Math.min(p.x, dragOrigin.value.x),
@@ -859,7 +986,9 @@
   const loadPresets = async () => {
     try {
       const res = await fetch('/skill-timer-presets/manifest.json');
-      if (!res.ok) return;
+      if (!res.ok) {
+        return;
+      }
       presets.value = await res.json();
     } catch {
       // 기본 스킬 목록이 없으면 무시
@@ -868,7 +997,10 @@
 
   const openPresetPicker = () => {
     if (!searchArea.value) {
-      toast.warn('검색 영역을 먼저 지정하세요', '기본 스킬을 등록하기 전에 화면 공유 후 검색 영역을 먼저 지정해주세요.');
+      toast.warn(
+        '검색 영역을 먼저 지정하세요',
+        '기본 스킬을 등록하기 전에 화면 공유 후 검색 영역을 먼저 지정해주세요.'
+      );
       return;
     }
     showPresetDialog.value = true;
@@ -879,7 +1011,16 @@
       const src = `${ICON_BASE_URL}${preset.file}`;
       const { template, w, h } = await loadImageTemplate(src);
       const sa = searchArea.value;
-      addSkillRegion({ name: preset.name, tplW: w, tplH: h, template, iconSrc: src, initialX: sa.x, initialY: sa.y, counterType: preset.counter });
+      addSkillRegion({
+        name: preset.name,
+        tplW: w,
+        tplH: h,
+        template,
+        iconSrc: src,
+        initialX: sa.x,
+        initialY: sa.y,
+        counterType: preset.counter,
+      });
       showPresetDialog.value = false;
       toast.success('등록 완료', `"${preset.name}" 스킬을 등록했어요. 화면에 보이면 자동으로 찾아서 감시해요.`);
     } catch {
@@ -888,12 +1029,16 @@
   };
 
   const onSelectEnd = () => {
-    if (!dragging.value) return;
+    if (!dragging.value) {
+      return;
+    }
     dragging.value = false;
 
     const rect = selectRect.value;
     selectRect.value = null;
-    if (!rect || rect.w < 8 || rect.h < 8 || !scale.value) return;
+    if (!rect || rect.w < 8 || rect.h < 8 || !scale.value) {
+      return;
+    }
 
     activeArea.value = {
       x: Math.round(rect.x / scale.value),
@@ -902,9 +1047,13 @@
       h: Math.round(rect.h / scale.value),
     };
     persist();
-    if (areaTarget.value === 'rune') toast.success('미니맵 영역 지정 완료', '이 영역에서 룬을 찾아요.');
-    else if (regions.length) toast.success('검색 영역 지정 완료', `등록된 스킬 ${regions.length}개를 이 영역에서 찾아요.`);
-    else toast.success('검색 영역 지정 완료', '이제 "스킬 선택"으로 감시할 스킬을 등록하세요.');
+    if (areaTarget.value === 'rune') {
+      toast.success('미니맵 영역 지정 완료', '이 영역에서 룬을 찾아요.');
+    } else if (regions.length) {
+      toast.success('검색 영역 지정 완료', `등록된 스킬 ${regions.length}개를 이 영역에서 찾아요.`);
+    } else {
+      toast.success('검색 영역 지정 완료', '이제 "스킬 선택"으로 감시할 스킬을 등록하세요.');
+    }
   };
 
   const onSelectCancel = () => {
@@ -929,7 +1078,9 @@
   const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
 
   const onAreaEditMove = (e) => {
-    if (!areaEdit || !scale.value) return;
+    if (!areaEdit || !scale.value) {
+      return;
+    }
     const { mode, startX, startY, orig } = areaEdit;
     const dx = (e.clientX - startX) / scale.value;
     const dy = (e.clientY - startY) / scale.value;
@@ -949,23 +1100,35 @@
     let y1 = orig.y;
     let x2 = orig.x + orig.w;
     let y2 = orig.y + orig.h;
-    if (mode.includes('w')) x1 = clamp(x1 + dx, 0, x2 - AREA_MIN_SIZE);
-    if (mode.includes('e')) x2 = clamp(x2 + dx, x1 + AREA_MIN_SIZE, vw);
-    if (mode.includes('n')) y1 = clamp(y1 + dy, 0, y2 - AREA_MIN_SIZE);
-    if (mode.includes('s')) y2 = clamp(y2 + dy, y1 + AREA_MIN_SIZE, vh);
+    if (mode.includes('w')) {
+      x1 = clamp(x1 + dx, 0, x2 - AREA_MIN_SIZE);
+    }
+    if (mode.includes('e')) {
+      x2 = clamp(x2 + dx, x1 + AREA_MIN_SIZE, vw);
+    }
+    if (mode.includes('n')) {
+      y1 = clamp(y1 + dy, 0, y2 - AREA_MIN_SIZE);
+    }
+    if (mode.includes('s')) {
+      y2 = clamp(y2 + dy, y1 + AREA_MIN_SIZE, vh);
+    }
     activeArea.value = { x: Math.round(x1), y: Math.round(y1), w: Math.round(x2 - x1), h: Math.round(y2 - y1) };
   };
 
   const onAreaEditEnd = () => {
     window.removeEventListener('pointermove', onAreaEditMove);
     window.removeEventListener('pointerup', onAreaEditEnd);
-    if (!areaEdit) return;
+    if (!areaEdit) {
+      return;
+    }
     areaEdit = null;
     persist();
   };
 
   const onAreaEditStart = (e, mode) => {
-    if (!activeArea.value) return;
+    if (!activeArea.value) {
+      return;
+    }
     e.preventDefault();
     areaEdit = { mode, startX: e.clientX, startY: e.clientY, orig: { ...activeArea.value } };
     // 영역 밖으로 빠르게 끌어도 놓치지 않도록 창 전체에서 받는다
@@ -977,7 +1140,9 @@
   const onAreaDialogShow = async () => {
     await nextTick();
     const video = videoRef.value;
-    if (!video || !stream.value) return;
+    if (!video || !stream.value) {
+      return;
+    }
     video.srcObject = stream.value;
     video.onloadedmetadata = updateScale;
     await video.play().catch(() => {});
@@ -989,7 +1154,9 @@
   const onAreaDialogHide = () => {
     resizeObserver?.disconnect();
     resizeObserver = null;
-    if (videoRef.value) videoRef.value.srcObject = null;
+    if (videoRef.value) {
+      videoRef.value.srcObject = null;
+    }
     onSelectCancel();
     onAreaEditEnd();
   };
@@ -1044,14 +1211,22 @@
 
   // 스킬 표와 같은 말과 색으로 상태를 보여준다
   const runeStatusLabel = computed(() => {
-    if (!rune.enabled) return '중지';
-    if (runeState.status === 'present') return runeState.absentStreak > 0 ? `찾는 중 ${runeState.absentStreak}/${GONE_TICKS}` : '인식 중';
+    if (!rune.enabled) {
+      return '중지';
+    }
+    if (runeState.status === 'present') {
+      return runeState.absentStreak > 0 ? `찾는 중 ${runeState.absentStreak}/${GONE_TICKS}` : '인식 중';
+    }
     return '대기 중';
   });
 
   const runeStatusSeverity = computed(() => {
-    if (!rune.enabled) return 'secondary';
-    if (runeState.status === 'present') return runeState.absentStreak > 0 ? 'warn' : 'success';
+    if (!rune.enabled) {
+      return 'secondary';
+    }
+    if (runeState.status === 'present') {
+      return runeState.absentStreak > 0 ? 'warn' : 'success';
+    }
     return 'secondary';
   });
 
@@ -1063,7 +1238,9 @@
 
   const onBoosterAlertChange = () => {
     booster.alertBeforeSec ??= 0;
-    if (boosterState.endsAt && !boosterState.alerted) boosterState.alertAt = boosterState.endsAt - booster.alertBeforeSec * 1000;
+    if (boosterState.endsAt && !boosterState.alerted) {
+      boosterState.alertAt = boosterState.endsAt - booster.alertBeforeSec * 1000;
+    }
     persist();
   };
 
@@ -1074,33 +1251,59 @@
 
   // 스킬 표와 같은 말과 색으로 상태를 보여준다
   const boosterStatusLabel = computed(() => {
-    if (!booster.enabled) return '중지';
-    const remain = boosterState.endsAt ? `${formatSeconds(Math.max(0, Math.round((boosterState.endsAt - nowTick.value) / 1000)))} 남음` : '';
-    if (boosterState.status === 'present') return remain ? `인식 중 · ${remain}` : '인식 중';
-    if (boosterState.status === 'hidden') return remain ? `찾는 중 · 약 ${remain}` : `찾는 중 ${boosterState.absentStreak}/${GONE_TICKS}`;
+    if (!booster.enabled) {
+      return '중지';
+    }
+    const remain = boosterState.endsAt
+      ? `${formatSeconds(Math.max(0, Math.round((boosterState.endsAt - nowTick.value) / 1000)))} 남음`
+      : '';
+    if (boosterState.status === 'present') {
+      return remain ? `인식 중 · ${remain}` : '인식 중';
+    }
+    if (boosterState.status === 'hidden') {
+      return remain ? `찾는 중 · 약 ${remain}` : `찾는 중 ${boosterState.absentStreak}/${GONE_TICKS}`;
+    }
     return '대기 중';
   });
 
   const boosterStatusSeverity = computed(() => {
-    if (!booster.enabled) return 'secondary';
-    if (boosterState.status === 'present') return 'success';
-    if (boosterState.status === 'hidden') return 'warn';
-    if (boosterState.status === 'gone') return 'secondary';
+    if (!booster.enabled) {
+      return 'secondary';
+    }
+    if (boosterState.status === 'present') {
+      return 'success';
+    }
+    if (boosterState.status === 'hidden') {
+      return 'warn';
+    }
+    if (boosterState.status === 'gone') {
+      return 'secondary';
+    }
     return 'secondary';
   });
 
   const boosterHint = computed(() => {
     const sec = booster.alertBeforeSec ?? 0;
-    if (sec > 0) return `끝나기 ${sec}초 전`;
-    if (sec < 0) return `끝나고 ${-sec}초 후`;
+    if (sec > 0) {
+      return `끝나기 ${sec}초 전`;
+    }
+    if (sec < 0) {
+      return `끝나고 ${-sec}초 후`;
+    }
     return '끝날 때';
   });
 
-  const runeHint = computed(() => (rune.mode === 'repeat' ? `떠 있는 동안 ${runeAlertOptions.find((o) => o.value === rune.intervalSec)?.label ?? ''}` : '나타날 때 한 번'));
+  const runeHint = computed(() =>
+    rune.mode === 'repeat'
+      ? `떠 있는 동안 ${runeAlertOptions.find((o) => o.value === rune.intervalSec)?.label ?? ''}`
+      : '나타날 때 한 번'
+  );
 
   const removeRegion = (id) => {
     const idx = regions.findIndex((r) => r.id === id);
-    if (idx !== -1) regions.splice(idx, 1);
+    if (idx !== -1) {
+      regions.splice(idx, 1);
+    }
     templateStore.delete(id);
     openDetails.delete(id);
     persist();
@@ -1109,22 +1312,31 @@
   // 상세 설정(최소 일치도·소리)을 펼친 스킬 id. 여러 개를 동시에 펼칠 수 있고 저장하지 않는다
   const openDetails = reactive(new Set());
   const toggleDetail = (id) => {
-    if (openDetails.has(id)) openDetails.delete(id);
-    else openDetails.add(id);
+    if (openDetails.has(id)) {
+      openDetails.delete(id);
+    } else {
+      openDetails.add(id);
+    }
   };
 
   const onAlertSettingChange = (region) => {
     region.alertBeforeSec ??= 0;
     region.alertAtCount ??= 0;
-    if (region.counterType === 'time' && region.endsAt && !region.alerted) region.alertAt = region.endsAt - region.alertBeforeSec * 1000;
+    if (region.counterType === 'time' && region.endsAt && !region.alerted) {
+      region.alertAt = region.endsAt - region.alertBeforeSec * 1000;
+    }
     persist();
   };
 
   const alertHint = (r) => {
     if (r.counterType === 'time') {
       const sec = r.alertBeforeSec ?? 0;
-      if (sec > 0) return `끝나기 ${sec}초 전`;
-      if (sec < 0) return `끝나고 ${-sec}초 후`;
+      if (sec > 0) {
+        return `끝나기 ${sec}초 전`;
+      }
+      if (sec < 0) {
+        return `끝나고 ${-sec}초 후`;
+      }
       return '끝날 때';
     }
     return (r.alertAtCount ?? 0) > 0 ? `${r.alertAtCount}회 남았을 때` : '다 썼을 때';
@@ -1136,7 +1348,9 @@
   };
 
   const searchAreaBoxStyle = computed(() => {
-    if (!activeArea.value) return {};
+    if (!activeArea.value) {
+      return {};
+    }
     const sa = activeArea.value;
     return {
       left: `${sa.x * scale.value}px`,
@@ -1161,36 +1375,55 @@
   });
 
   const selectRectStyle = computed(() => {
-    if (!selectRect.value) return {};
+    if (!selectRect.value) {
+      return {};
+    }
     const { x, y, w, h } = selectRect.value;
     return { left: `${x}px`, top: `${y}px`, width: `${w}px`, height: `${h}px` };
   });
 
-  const formatSeconds = (sec) => (sec >= 60 ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}` : `${sec}초`);
+  const formatSeconds = (sec) =>
+    sec >= 60 ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}` : `${sec}초`;
 
   const remainingLabel = (r) => {
-    if (r.counterType === 'time' && r.endsAt) return `${formatSeconds(Math.max(0, Math.round((r.endsAt - nowTick.value) / 1000)))} 남음`;
-    if (r.counterType === 'count' && r.count !== null) return `${r.count}회 남음`;
+    if (r.counterType === 'time' && r.endsAt) {
+      return `${formatSeconds(Math.max(0, Math.round((r.endsAt - nowTick.value) / 1000)))} 남음`;
+    }
+    if (r.counterType === 'count' && r.count !== null) {
+      return `${r.count}회 남음`;
+    }
     return '';
   };
 
   const statusLabel = (r) => {
-    if (r.loadFailed) return '이미지 불러오기 실패';
-    if (r.paused) return '중지';
+    if (r.loadFailed) {
+      return '이미지 불러오기 실패';
+    }
+    if (r.paused) {
+      return '중지';
+    }
     const remain = remainingLabel(r);
-    if (r.status === 'present') return remain ? `인식 중 · ${remain}` : '인식 중';
+    if (r.status === 'present') {
+      return remain ? `인식 중 · ${remain}` : '인식 중';
+    }
     if (r.status === 'hidden') {
-      if (remain) return `찾는 중 · ${r.counterType === 'count' ? `마지막 ${remain}` : `약 ${remain}`}`;
+      if (remain) {
+        return `찾는 중 · ${r.counterType === 'count' ? `마지막 ${remain}` : `약 ${remain}`}`;
+      }
       return `찾는 중 ${r.absentStreak}/${GONE_TICKS}`;
     }
-    if (r.status === 'gone') return r.counterType === 'count' && r.count === 0 ? '횟수 소진!' : '대기 중';
+    if (r.status === 'gone') {
+      return r.counterType === 'count' && r.count === 0 ? '횟수 소진!' : '대기 중';
+    }
     return '대기 중';
   };
 
   const loadSounds = async () => {
     try {
       const res = await fetch('/skill-timer-presets/sounds.json');
-      if (res.ok) sounds.value = await res.json();
+      if (res.ok) {
+        sounds.value = await res.json();
+      }
     } catch {
       // 소리 목록이 없으면 기본 소리만 사용
     }
@@ -1200,11 +1433,21 @@
   };
 
   const statusSeverity = (r) => {
-    if (r.loadFailed) return 'danger';
-    if (r.paused) return 'secondary';
-    if (r.status === 'present') return 'success';
-    if (r.status === 'hidden') return 'warn';
-    if (r.status === 'gone') return 'secondary';
+    if (r.loadFailed) {
+      return 'danger';
+    }
+    if (r.paused) {
+      return 'secondary';
+    }
+    if (r.status === 'present') {
+      return 'success';
+    }
+    if (r.status === 'hidden') {
+      return 'warn';
+    }
+    if (r.status === 'gone') {
+      return 'secondary';
+    }
     return 'secondary';
   };
 
@@ -1237,7 +1480,13 @@
     <div class="card flex w-full flex-col gap-4">
       <div class="text-xl font-semibold">SkillTimer</div>
       <div class="flex flex-wrap items-center gap-2">
-        <Button v-if="!isSharing" label="화면 공유 시작" icon="pi pi-desktop" :loading="isStarting" @click="startShare" />
+        <Button
+          v-if="!isSharing"
+          label="화면 공유 시작"
+          icon="pi pi-desktop"
+          :loading="isStarting"
+          @click="startShare"
+        />
         <Button v-else label="화면 공유 중지" icon="pi pi-times" severity="danger" @click="stopShare" />
       </div>
     </div>
@@ -1249,12 +1498,31 @@
       <div class="flex flex-wrap items-center justify-between gap-2">
         <div class="text-xl font-semibold">스킬 알림</div>
         <div class="flex flex-wrap items-center gap-2">
-          <Button v-if="isSharing && searchArea" label="스킬 선택" icon="pi pi-images" severity="secondary" outlined :class="{ 'breathe-hint': !regions.length }" @click="openPresetPicker" />
-          <Button v-if="isSharing" label="검색 영역 설정" icon="pi pi-expand" severity="secondary" outlined @click="openAreaDialog('skill')" />
+          <Button
+            v-if="isSharing && searchArea"
+            label="스킬 선택"
+            icon="pi pi-images"
+            severity="secondary"
+            outlined
+            :class="{ 'breathe-hint': !regions.length }"
+            @click="openPresetPicker"
+          />
+          <Button
+            v-if="isSharing"
+            label="검색 영역 설정"
+            icon="pi pi-expand"
+            severity="secondary"
+            outlined
+            @click="openAreaDialog('skill')"
+          />
         </div>
       </div>
       <div v-if="!regions.length" class="text-muted-color text-sm">
-        {{ searchArea ? '"스킬 선택"으로 감시할 스킬을 등록하세요.' : '"검색 영역 설정"에서 스킬이 표시되는 곳을 먼저 지정하세요.' }}
+        {{
+          searchArea
+            ? '"스킬 선택"으로 감시할 스킬을 등록하세요.'
+            : '"검색 영역 설정"에서 스킬이 표시되는 곳을 먼저 지정하세요.'
+        }}
       </div>
       <div v-else class="flex flex-col">
         <!-- 모든 줄이 같은 열 너비를 쓰도록 제목줄과 각 줄에 같은 grid 템플릿을 사용 (모바일은 줄바꿈 배치) -->
@@ -1266,16 +1534,45 @@
           <span>알림</span>
           <span></span>
         </div>
-        <div v-for="r in regions" :key="r.id" class="skill-row border-surface-200 flex flex-wrap items-center gap-3 border-b py-3 last:border-0">
+        <div
+          v-for="r in regions"
+          :key="r.id"
+          class="skill-row border-surface-200 flex flex-wrap items-center gap-3 border-b py-3 last:border-0"
+        >
           <label class="flex cursor-pointer items-center gap-2">
-            <ToggleSwitch class="alert-toggle" :modelValue="!r.paused" aria-label="감시" @update:modelValue="togglePause(r)" />
-            <span class="text-xs font-medium" :class="r.paused ? 'text-muted-color' : 'text-color'">{{ r.paused ? '꺼짐' : '켜짐' }}</span>
+            <ToggleSwitch
+              class="alert-toggle"
+              :modelValue="!r.paused"
+              aria-label="감시"
+              @update:modelValue="togglePause(r)"
+            />
+            <span class="text-xs font-medium" :class="r.paused ? 'text-muted-color' : 'text-color'">
+              {{ r.paused ? '꺼짐' : '켜짐' }}
+            </span>
           </label>
           <div class="flex items-center gap-1.5">
-            <img :src="r.refPreviewSrc" crossorigin="anonymous" alt="기준 스킬" title="기준" class="border-surface-300 h-10 w-10 rounded border bg-black" />
+            <img
+              :src="r.refPreviewSrc"
+              crossorigin="anonymous"
+              alt="기준 스킬"
+              title="기준"
+              class="border-surface-300 h-10 w-10 rounded border bg-black"
+            />
             <i class="pi pi-angle-right text-muted-color text-xs"></i>
-            <img v-if="r.previewSrc" :src="r.previewSrc" alt="현재 스킬" title="현재" class="border-surface-300 h-10 w-10 rounded border bg-black" />
-            <div v-else class="border-surface-300 text-muted-color flex h-10 w-10 items-center justify-center rounded border border-dashed text-xs" title="화면 공유 중에만 표시돼요">-</div>
+            <img
+              v-if="r.previewSrc"
+              :src="r.previewSrc"
+              alt="현재 스킬"
+              title="현재"
+              class="border-surface-300 h-10 w-10 rounded border bg-black"
+            />
+            <div
+              v-else
+              class="border-surface-300 text-muted-color flex h-10 w-10 items-center justify-center rounded border border-dashed text-xs"
+              title="화면 공유 중에만 표시돼요"
+            >
+              -
+            </div>
           </div>
 
           <InputText v-model="r.name" class="skill-name w-40" size="small" @blur="persist" />
@@ -1327,10 +1624,20 @@
               :aria-expanded="openDetails.has(r.id)"
               @click="toggleDetail(r.id)"
             />
-            <Button icon="pi pi-trash" severity="danger" text rounded v-tooltip.top="'삭제'" @click="removeRegion(r.id)" />
+            <Button
+              icon="pi pi-trash"
+              severity="danger"
+              text
+              rounded
+              v-tooltip.top="'삭제'"
+              @click="removeRegion(r.id)"
+            />
           </div>
 
-          <div v-if="openDetails.has(r.id)" class="skill-detail bg-surface-50 dark:bg-surface-800 flex w-full flex-wrap items-start gap-x-10 gap-y-4 rounded-lg px-4 py-3">
+          <div
+            v-if="openDetails.has(r.id)"
+            class="skill-detail bg-surface-50 dark:bg-surface-800 flex w-full flex-wrap items-start gap-x-10 gap-y-4 rounded-lg px-4 py-3"
+          >
             <div class="flex flex-col gap-1.5">
               <span class="text-muted-color text-xs font-medium">최소 일치도</span>
               <div class="flex items-center gap-3">
@@ -1342,8 +1649,26 @@
             <div class="flex flex-col gap-1.5">
               <span class="text-muted-color text-xs font-medium">소리</span>
               <div class="flex items-center gap-1">
-                <Select v-model="r.soundId" :options="soundOptions" option-label="name" option-value="id" size="small" class="w-44" aria-label="알림 소리" @change="onSoundChange(r)" />
-                <Button v-tooltip.top="'소리 미리 듣기'" icon="pi pi-volume-up" severity="secondary" text rounded size="small" aria-label="소리 미리 듣기" @click="playAlertSound(r.soundId)" />
+                <Select
+                  v-model="r.soundId"
+                  :options="soundOptions"
+                  option-label="name"
+                  option-value="id"
+                  size="small"
+                  class="w-44"
+                  aria-label="알림 소리"
+                  @change="onSoundChange(r)"
+                />
+                <Button
+                  v-tooltip.top="'소리 미리 듣기'"
+                  icon="pi pi-volume-up"
+                  severity="secondary"
+                  text
+                  rounded
+                  size="small"
+                  aria-label="소리 미리 듣기"
+                  @click="playAlertSound(r.soundId)"
+                />
               </div>
             </div>
           </div>
@@ -1357,9 +1682,18 @@
     <div class="card flex w-full flex-col gap-4">
       <div class="flex flex-wrap items-center justify-between gap-2">
         <div class="text-xl font-semibold">룬 알림</div>
-        <Button v-if="isSharing" label="미니맵 영역 설정" icon="pi pi-map" severity="secondary" outlined @click="openAreaDialog('rune')" />
+        <Button
+          v-if="isSharing"
+          label="미니맵 영역 설정"
+          icon="pi pi-map"
+          severity="secondary"
+          outlined
+          @click="openAreaDialog('rune')"
+        />
       </div>
-      <div v-if="!runeArea" class="text-muted-color text-sm">"미니맵 영역 설정"에서 미니맵이 보이는 곳을 지정하세요.</div>
+      <div v-if="!runeArea" class="text-muted-color text-sm">
+        "미니맵 영역 설정"에서 미니맵이 보이는 곳을 지정하세요.
+      </div>
       <div v-else class="flex flex-col">
         <!-- 스킬 알림 표와 같은 grid 템플릿(skill-row)을 써서 두 표의 열을 맞춘다 -->
         <div class="skill-row text-muted-color border-surface-200 hidden border-b pb-2 text-xs font-medium">
@@ -1372,11 +1706,30 @@
         </div>
         <div class="skill-row flex flex-wrap items-center gap-3 py-3">
           <label class="flex cursor-pointer items-center gap-2">
-            <ToggleSwitch class="alert-toggle" :modelValue="rune.enabled" aria-label="룬 알림" @update:modelValue="onRuneEnabledChange" />
-            <span class="text-xs font-medium" :class="rune.enabled ? 'text-color' : 'text-muted-color'">{{ rune.enabled ? '켜짐' : '꺼짐' }}</span>
+            <ToggleSwitch
+              class="alert-toggle"
+              :modelValue="rune.enabled"
+              aria-label="룬 알림"
+              @update:modelValue="onRuneEnabledChange"
+            />
+            <span class="text-xs font-medium" :class="rune.enabled ? 'text-color' : 'text-muted-color'">
+              {{ rune.enabled ? '켜짐' : '꺼짐' }}
+            </span>
           </label>
-          <img v-if="runeState.previewSrc" :src="runeState.previewSrc" alt="현재 룬" title="현재" class="border-surface-300 h-10 w-10 rounded border bg-black [image-rendering:pixelated]" />
-          <div v-else class="border-surface-300 text-muted-color flex h-10 w-10 items-center justify-center rounded border border-dashed text-xs" title="룬을 찾으면 표시돼요">-</div>
+          <img
+            v-if="runeState.previewSrc"
+            :src="runeState.previewSrc"
+            alt="현재 룬"
+            title="현재"
+            class="border-surface-300 h-10 w-10 rounded border bg-black [image-rendering:pixelated]"
+          />
+          <div
+            v-else
+            class="border-surface-300 text-muted-color flex h-10 w-10 items-center justify-center rounded border border-dashed text-xs"
+            title="룬을 찾으면 표시돼요"
+          >
+            -
+          </div>
 
           <span class="skill-name w-40 text-sm font-medium">룬</span>
 
@@ -1388,7 +1741,15 @@
           <div class="flex flex-col items-start gap-1">
             <div class="flex items-center gap-2">
               <span class="text-muted-color skill-mlabel text-xs">알림</span>
-              <Select v-model="runeAlertValue" :options="runeAlertOptions" option-label="label" option-value="value" size="small" class="w-32" aria-label="룬 알림 방식" />
+              <Select
+                v-model="runeAlertValue"
+                :options="runeAlertOptions"
+                option-label="label"
+                option-value="value"
+                size="small"
+                class="w-32"
+                aria-label="룬 알림 방식"
+              />
             </div>
             <span class="text-muted-color text-xs">{{ runeHint }} 알림</span>
           </div>
@@ -1406,12 +1767,33 @@
             />
           </div>
 
-          <div v-if="openDetails.has('rune')" class="skill-detail bg-surface-50 dark:bg-surface-800 flex w-full flex-wrap items-start gap-x-10 gap-y-4 rounded-lg px-4 py-3">
+          <div
+            v-if="openDetails.has('rune')"
+            class="skill-detail bg-surface-50 dark:bg-surface-800 flex w-full flex-wrap items-start gap-x-10 gap-y-4 rounded-lg px-4 py-3"
+          >
             <div class="flex flex-col gap-1.5">
               <span class="text-muted-color text-xs font-medium">소리</span>
               <div class="flex items-center gap-1">
-                <Select v-model="rune.soundId" :options="soundOptions" option-label="name" option-value="id" size="small" class="w-44" aria-label="룬 알림 소리" @change="onRuneSoundChange" />
-                <Button v-tooltip.top="'소리 미리 듣기'" icon="pi pi-volume-up" severity="secondary" text rounded size="small" aria-label="소리 미리 듣기" @click="playAlertSound(rune.soundId)" />
+                <Select
+                  v-model="rune.soundId"
+                  :options="soundOptions"
+                  option-label="name"
+                  option-value="id"
+                  size="small"
+                  class="w-44"
+                  aria-label="룬 알림 소리"
+                  @change="onRuneSoundChange"
+                />
+                <Button
+                  v-tooltip.top="'소리 미리 듣기'"
+                  icon="pi pi-volume-up"
+                  severity="secondary"
+                  text
+                  rounded
+                  size="small"
+                  aria-label="소리 미리 듣기"
+                  @click="playAlertSound(rune.soundId)"
+                />
               </div>
             </div>
           </div>
@@ -1438,12 +1820,31 @@
         </div>
         <div class="skill-row flex flex-wrap items-center gap-3 py-3">
           <label class="flex cursor-pointer items-center gap-2">
-            <ToggleSwitch class="alert-toggle" :modelValue="booster.enabled" aria-label="부스터 종료 알림" @update:modelValue="onBoosterEnabledChange" />
-            <span class="text-xs font-medium" :class="booster.enabled ? 'text-color' : 'text-muted-color'">{{ booster.enabled ? '켜짐' : '꺼짐' }}</span>
+            <ToggleSwitch
+              class="alert-toggle"
+              :modelValue="booster.enabled"
+              aria-label="부스터 종료 알림"
+              @update:modelValue="onBoosterEnabledChange"
+            />
+            <span class="text-xs font-medium" :class="booster.enabled ? 'text-color' : 'text-muted-color'">
+              {{ booster.enabled ? '켜짐' : '꺼짐' }}
+            </span>
           </label>
           <!-- 부스터는 기준 이미지가 항상 같아 의미가 없으므로, 실제로 찾아서 읽은 패널만 칸 폭(7rem)에 맞춰 보여준다 -->
-          <img v-if="boosterState.previewSrc" :src="boosterState.previewSrc" alt="현재 부스터 패널" title="현재" class="border-surface-300 h-10 w-28 rounded border bg-black object-contain" />
-          <div v-else class="border-surface-300 text-muted-color flex h-10 w-28 items-center justify-center rounded border border-dashed text-xs" title="부스터를 찾으면 표시돼요">-</div>
+          <img
+            v-if="boosterState.previewSrc"
+            :src="boosterState.previewSrc"
+            alt="현재 부스터 패널"
+            title="현재"
+            class="border-surface-300 h-10 w-28 rounded border bg-black object-contain"
+          />
+          <div
+            v-else
+            class="border-surface-300 text-muted-color flex h-10 w-28 items-center justify-center rounded border border-dashed text-xs"
+            title="부스터를 찾으면 표시돼요"
+          >
+            -
+          </div>
 
           <span class="skill-name w-40 text-sm font-medium">부스터</span>
 
@@ -1483,7 +1884,10 @@
             />
           </div>
 
-          <div v-if="openDetails.has('booster')" class="skill-detail bg-surface-50 dark:bg-surface-800 flex w-full flex-wrap items-start gap-x-10 gap-y-4 rounded-lg px-4 py-3">
+          <div
+            v-if="openDetails.has('booster')"
+            class="skill-detail bg-surface-50 dark:bg-surface-800 flex w-full flex-wrap items-start gap-x-10 gap-y-4 rounded-lg px-4 py-3"
+          >
             <div class="flex flex-col gap-1.5">
               <span class="text-muted-color text-xs font-medium">소리</span>
               <div class="flex items-center gap-1">
@@ -1497,7 +1901,16 @@
                   aria-label="부스터 종료 알림 소리"
                   @change="onBoosterSoundChange"
                 />
-                <Button v-tooltip.top="'소리 미리 듣기'" icon="pi pi-volume-up" severity="secondary" text rounded size="small" aria-label="소리 미리 듣기" @click="playAlertSound(booster.soundId)" />
+                <Button
+                  v-tooltip.top="'소리 미리 듣기'"
+                  icon="pi pi-volume-up"
+                  severity="secondary"
+                  text
+                  rounded
+                  size="small"
+                  aria-label="소리 미리 듣기"
+                  @click="playAlertSound(booster.soundId)"
+                />
               </div>
             </div>
           </div>
@@ -1519,7 +1932,9 @@
     <div class="flex flex-col gap-3">
       <div class="text-muted-color text-sm">
         <template v-if="activeArea">영역을 끌어서 옮기거나, 모서리·변의 점을 끌어 크기를 바꿀 수 있어요.</template>
-        <template v-else-if="areaTarget === 'rune'">미니맵이 보이는 곳을 드래그해서 영역을 지정하세요. 미니맵 전체가 들어가도록 넉넉하게 잡아주세요.</template>
+        <template v-else-if="areaTarget === 'rune'">
+          미니맵이 보이는 곳을 드래그해서 영역을 지정하세요. 미니맵 전체가 들어가도록 넉넉하게 잡아주세요.
+        </template>
         <template v-else>스킬이 표시되는 곳을 드래그해서 검색 영역을 지정하세요.</template>
       </div>
       <div
@@ -1531,7 +1946,12 @@
         @mouseup="onSelectEnd"
         @mouseleave="onSelectCancel"
       >
-        <video ref="videoRef" class="border-surface-300 block max-h-[70vh] max-w-full rounded border" muted playsinline></video>
+        <video
+          ref="videoRef"
+          class="border-surface-300 block max-h-[70vh] max-w-full rounded border"
+          muted
+          playsinline
+        ></video>
         <div
           v-if="activeArea"
           class="border-primary absolute cursor-move touch-none border-2 border-dashed"
@@ -1549,20 +1969,49 @@
           ></span>
         </div>
         <template v-for="r in areaTarget === 'skill' ? regions : []" :key="`box-${r.id}`">
-          <div v-if="r.status === 'present'" class="pointer-events-none absolute border-2 border-green-500" :style="regionBoxStyle(r)"></div>
-          <div v-else-if="r.status === 'hidden'" class="pointer-events-none absolute border-2 border-dashed border-amber-500" :style="regionBoxStyle(r)"></div>
+          <div
+            v-if="r.status === 'present'"
+            class="pointer-events-none absolute border-2 border-green-500"
+            :style="regionBoxStyle(r)"
+          ></div>
+          <div
+            v-else-if="r.status === 'hidden'"
+            class="pointer-events-none absolute border-2 border-dashed border-amber-500"
+            :style="regionBoxStyle(r)"
+          ></div>
         </template>
-        <div v-if="areaTarget === 'rune' && runeState.status === 'present'" class="pointer-events-none absolute border-2 border-green-500" :style="runeBoxStyle"></div>
-        <div v-if="selectRect" class="border-primary bg-primary/20 pointer-events-none absolute border-2 border-dashed" :style="selectRectStyle"></div>
+        <div
+          v-if="areaTarget === 'rune' && runeState.status === 'present'"
+          class="pointer-events-none absolute border-2 border-green-500"
+          :style="runeBoxStyle"
+        ></div>
+        <div
+          v-if="selectRect"
+          class="border-primary bg-primary/20 pointer-events-none absolute border-2 border-dashed"
+          :style="selectRectStyle"
+        ></div>
       </div>
     </div>
     <template #footer>
-      <Button v-if="activeArea" label="다시 그리기" icon="pi pi-refresh" severity="secondary" outlined @click="clearActiveArea" />
+      <Button
+        v-if="activeArea"
+        label="다시 그리기"
+        icon="pi pi-refresh"
+        severity="secondary"
+        outlined
+        @click="clearActiveArea"
+      />
       <Button label="완료" icon="pi pi-check" @click="showAreaDialog = false" />
     </template>
   </Dialog>
 
-  <Dialog v-model:visible="showPresetDialog" header="스킬 선택" modal :style="{ width: '44rem' }" :breakpoints="{ '768px': '95vw' }">
+  <Dialog
+    v-model:visible="showPresetDialog"
+    header="스킬 선택"
+    modal
+    :style="{ width: '44rem' }"
+    :breakpoints="{ '768px': '95vw' }"
+  >
     <div v-if="!presets.length" class="text-muted-color text-sm">아직 등록된 스킬이 없어요.</div>
     <div v-else class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
       <button
@@ -1572,7 +2021,12 @@
         class="border-surface-200 dark:border-surface-700 hover:border-primary hover:bg-surface-100 dark:hover:bg-surface-800 flex cursor-pointer flex-col items-center gap-2 rounded-lg border p-3 transition-colors"
         @click="registerFromPreset(p)"
       >
-        <img :src="`${ICON_BASE_URL}${p.file}`" crossorigin="anonymous" :alt="p.name" class="h-16 w-16 [image-rendering:pixelated]" />
+        <img
+          :src="`${ICON_BASE_URL}${p.file}`"
+          crossorigin="anonymous"
+          :alt="p.name"
+          class="h-16 w-16 [image-rendering:pixelated]"
+        />
         <span class="text-color text-center text-sm leading-snug font-medium break-keep">{{ p.name }}</span>
       </button>
     </div>

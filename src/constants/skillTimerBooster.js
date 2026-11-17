@@ -31,7 +31,19 @@ const DECIMAL_POINT = [
 ];
 
 // 켜진 획 → 숫자. 빈 칸(앞자리 없음)은 0으로 본다
-const DIGITS = { abcdef: 0, bc: 1, abdeg: 2, abcdg: 3, bcfg: 4, acdfg: 5, acdefg: 6, abc: 7, abcdefg: 8, abcdfg: 9, '': 0 };
+const DIGITS = {
+  abcdef: 0,
+  bc: 1,
+  abdeg: 2,
+  abcdg: 3,
+  bcfg: 4,
+  acdfg: 5,
+  acdefg: 6,
+  abc: 7,
+  abcdefg: 8,
+  abcdfg: 9,
+  '': 0,
+};
 
 // 숫자 색은 위는 밝은 노랑(#ffffdd), 아래는 주황(#ffbb00). 화면 공유 영상은 색을 2x2 단위로 뭉개도
 // 밝기는 거의 그대로라 밝기로 보고, 흰 글자와 구분하려고 빨강이 파랑보다 낮지 않은지만 본다
